@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#1c1917" />
+  <title>Ramree — Beautiful, on you.</title>
+  <meta name="description" content="Ramree — AI-powered dress try-on and shopping." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <!-- App shell: a phone-sized stage. All screens render into #stage. -->
+  <div id="app">
+    <header id="topbar" class="topbar" hidden>
+      <button id="backBtn" class="iconbtn" aria-label="Back">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div id="topbarTitle" class="topbar-title">Ramree</div>
+      <div class="topbar-spacer"></div>
+    </header>
+
+    <main id="stage" class="stage"><!-- screens render here --></main>
+
+    <!-- Toast -->
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

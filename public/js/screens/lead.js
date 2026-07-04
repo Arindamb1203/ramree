@@ -1,0 +1,63 @@
+/* Name + WhatsApp capture — common step before wishlist / buy / try-on */
+import { api, state, go, toast, escapeHtml } from "../app.js";
+
+const ACTION_LABEL = { tryon: "try it on", buy: "buy", wishlist: "save to wishlist" };
+
+export async function render(view, { action }) {
+  const pre = state.lead || {};
+  view.innerHTML = `
+    <div class="eyebrow">Your details</div>
+    <h1 class="display" style="font-size:30px;">A few details</h1>
+    <div class="lead">We'll use your WhatsApp number to ${ACTION_LABEL[action] || "continue"} and keep your ${action === "wishlist" ? "wishlist" : "order"} handy.</div>
+
+    <div class="field">
+      <label for="nm">Your name</label>
+      <input class="input" id="nm" type="text" autocomplete="name" placeholder="e.g. Aditi" value="${escapeHtml(pre.name || "")}">
+    </div>
+    <div class="field">
+      <label for="wa">WhatsApp number</label>
+      <div class="phone-row">
+        <input class="input cc" id="cc" type="text" inputmode="numeric" value="+91" aria-label="Country code">
+        <input class="input" id="wa" type="tel" inputmode="numeric" autocomplete="tel" placeholder="10-digit number" value="${escapeHtml((pre.local || ""))}">
+      </div>
+      <div class="hint">Standard privacy applies. You can opt out of messages anytime on the next screen.</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="go">Continue</button>
+    </div>
+  `;
+
+  const nm = view.querySelector("#nm");
+  const cc = view.querySelector("#cc");
+  const wa = view.querySelector("#wa");
+  const btn = view.querySelector("#go");
+
+  btn.addEventListener("click", async () => {
+    const name = nm.value.trim();
+    const local = wa.value.replace(/\D/g, "");
+    const ccv = cc.value.replace(/[^\d+]/g, "").replace(/^\+?/, "");
+    if (!name) return toast("Please enter your name");
+    if (local.length < 7) return toast("Please enter a valid WhatsApp number");
+
+    const whatsapp_number = (ccv || "91") + local;
+
+    btn.disabled = true;
+    btn.innerHTML = `<div class="spinner" style="width:18px;height:18px;border-width:2px;"></div>`;
+    try {
+      await api.saveLead({ name, whatsapp_number });
+      state.lead = { name, whatsapp_number, local };
+      routeByAction(action);
+    } catch (err) {
+      toast(err.message || "Couldn't save details");
+      btn.disabled = false;
+      btn.textContent = "Continue";
+    }
+  });
+}
+
+function routeByAction(action) {
+  if (action === "wishlist") return go("wishlistConfirm", {}, { title: "Wishlist" });
+  if (action === "buy") return go("buy", {}, { title: "Payment" });
+  if (action === "tryon") return go("tryonCamera", {}, { title: "Try It On" });
+}

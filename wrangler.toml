@@ -1,0 +1,20 @@
+# Ramree — Cloudflare Pages configuration
+# Production branch: master | Build output: public | No build command
+#
+# The D1 binding below is used for local dev (`npx wrangler pages dev public`)
+# and for production. After creating the database (see README.md), paste the
+# real database_id below AND also add the binding in the Cloudflare Pages
+# dashboard (Settings → Functions → D1 database bindings) so production picks it up.
+
+name = "ramree"
+pages_build_output_dir = "public"
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ramree-db"
+database_id = "PASTE_DATABASE_ID_HERE"
+
+# Secrets (set via dashboard or `npx wrangler pages secret put`):
+#   OPENAI_API_KEY   — server-side OpenAI image generation key
+#   OPENAI_IMAGE_MODEL (optional) — "gpt-image-1" (default) or "gpt-image-1.5"
