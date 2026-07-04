@@ -13,7 +13,7 @@ compatibility_date = "2024-09-23"
 [[d1_databases]]
 binding = "DB"
 database_name = "ramree-db"
-database_id = "PASTE_DATABASE_ID_HERE"
+database_id = "f6375c7e-ccfe-428c-8e85-95e065967bdd"
 
 # Secrets (set via dashboard or `npx wrangler pages secret put`):
 #   OPENAI_API_KEY   — server-side OpenAI image generation key
