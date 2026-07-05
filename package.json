@@ -1,0 +1,13 @@
+{
+  "name": "ramree",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ramree — AI-powered mobile dress shopping web app",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.92.0"
+  }
+}

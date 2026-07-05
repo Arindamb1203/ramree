@@ -1,20 +1,22 @@
-# Ramree — Cloudflare Pages configuration
-# Production branch: master | Build output: public | No build command
-#
-# The D1 binding below is used for local dev (`npx wrangler pages dev public`)
-# and for production. After creating the database (see README.md), paste the
-# real database_id below AND also add the binding in the Cloudflare Pages
-# dashboard (Settings → Functions → D1 database bindings) so production picks it up.
+# Ramree — Cloudflare Worker (with static assets) configuration
+# Deployed as a Worker: static site in /public served via the ASSETS binding,
+# API handled by src/index.js which routes /api/* to the handlers in functions/api/.
 
 name = "ramree"
-pages_build_output_dir = "public"
+main = "src/index.js"
 compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "ramree-db"
 database_id = "f6375c7e-ccfe-428c-8e85-95e065967bdd"
 
-# Secrets (set via dashboard or `npx wrangler pages secret put`):
-#   OPENAI_API_KEY   — server-side OpenAI image generation key
-#   OPENAI_IMAGE_MODEL (optional) — "gpt-image-1" (default) or "gpt-image-1.5"
+# Secrets (set once via `npx wrangler secret put OPENAI_API_KEY`, or in the dashboard):
+#   OPENAI_API_KEY       — required for AI angle views + try-on
+#   OPENAI_IMAGE_MODEL   — optional, "gpt-image-1" (default) or "gpt-image-1.5"
+#   OPENAI_IMAGE_QUALITY — optional, "medium" (default) / "high" / "low"

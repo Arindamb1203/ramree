@@ -58,3 +58,28 @@ Bootstrap the entire Ramree app from the project spec: mobile-only AI dress-shop
 2. Replace Unsplash placeholder product images with real catalog photos.
 3. End-to-end test on a phone: catalog → product → try-on (camera + pose + generation) → buy/wishlist → WhatsApp opt-out.
 4. Tune pose thresholds and try-on prompt against real captures.
+
+---
+
+## Session 2 — 2026-07-05 · D1 live + Pages→Worker fix + deploy
+
+### Done
+- User ran `npx wrangler login` (interactive, browser OAuth). Credentials then cached, so subsequent wrangler calls worked from the tool shell.
+- Created D1 **ramree-db** (id `f6375c7e-ccfe-428c-8e85-95e065967bdd`, region OC); wired the id into `wrangler.toml`.
+- Applied `schema.sql` (5 tables) + `seed.sql` (3 categories, 6 products) to `--remote`. Verified counts (3/6).
+
+### Mistake found & corrected — Pages vs Worker mismatch
+- **Problem:** the Cloudflare project `ramree` was created by **connecting the GitHub repo**, which in Cloudflare's current dashboard produces a **Worker** (Workers Builds), *not* a Pages project. Every Git build failed and "No URLs enabled" — because the repo was written for **Pages** (`functions/` dir + `pages_build_output_dir`), which a Worker doesn't run.
+- **Fix (convert to Worker + static assets):**
+  - Rewrote `wrangler.toml` → Worker format: `main = "src/index.js"`, `[assets] directory="./public" binding="ASSETS"`, `nodejs_compat`, D1 binding `DB`.
+  - Added **`src/index.js`** — Worker entry that routes `/api/*` to the existing `functions/api/*` handlers (called with a synthesized `{request, env, ctx}` context) and lets the ASSETS binding serve everything else. **No changes needed to the function handlers** — they already export `onRequest(context)`.
+  - Added minimal **`package.json`** (wrangler devDep + dev/deploy scripts).
+- Deployed directly with `npx wrangler deploy` (bypasses the failing Git build). Bindings confirmed at deploy: `env.DB (ramree-db)`, `env.ASSETS`. workers.dev URL auto-enabled.
+
+### Live
+- **https://ramree.arindambhowmik2013.workers.dev** — home `HTTP 200`; `/api/products?categories=1` and `?category=…` return real D1 data. Verified.
+
+### Still pending
+- `OPENAI_API_KEY` secret not yet set → AI angle views + try-on will error until added (`npx wrangler secret put OPENAI_API_KEY` or dashboard). Catalog/product/wishlist/buy all work without it.
+- Real product photos still needed (Unsplash placeholders in use).
+- The dashboard D1 binding the user was mid-adding is now redundant (wrangler.toml defines it); harmless either way.
