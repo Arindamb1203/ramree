@@ -3,7 +3,7 @@
    Returns ephemeral data URLs (NOT persisted — regenerated on demand).
    These are generative approximations, not photos of the real garment's back/sides. */
 import { json, preflight, ensureTables, parseImages } from "./_utils.js";
-import { getModel, getQuality, urlToBlob, imageEdit } from "./_openai.js";
+import { getModel, urlToBlob, imageEdit } from "./_openai.js";
 
 const ANGLE_PROMPTS = [
   "the same garment worn by the same model, rotated to a three-quarter left view, identical fabric, colour, print and lighting, clean studio background",
@@ -34,19 +34,22 @@ export async function onRequest(context) {
 
     const blob = await urlToBlob(src);
     const model = getModel(env);
-    const quality = getQuality(env);
+    // Angle previews are approximations — use faster/cheaper "low" quality by
+    // default so the wait is shorter. (Try-on keeps the higher default quality.)
+    const quality = env.OPENAI_ANGLE_QUALITY || "low";
 
-    // Generate each angle independently for better angle control.
+    // Generate all angles in parallel (each independent for better angle control).
+    // Sequential would stack ~30s per image; parallel keeps total wall time ~1 image.
+    const settled = await Promise.allSettled(
+      ANGLE_PROMPTS.map((prompt) => imageEdit({
+        apiKey: env.OPENAI_API_KEY, model, quality, n: 1,
+        prompt: prompt + ". Photorealistic fashion e-commerce product photo.",
+        images: [{ blob, name: "garment.png" }],
+      }))
+    );
     const results = [];
-    for (const prompt of ANGLE_PROMPTS) {
-      try {
-        const imgs = await imageEdit({
-          apiKey: env.OPENAI_API_KEY, model, quality, n: 1,
-          prompt: prompt + ". Photorealistic fashion e-commerce product photo.",
-          images: [{ blob, name: "garment.png" }],
-        });
-        if (imgs[0]) results.push(imgs[0]);
-      } catch (e) { /* skip a failed angle, keep the rest */ }
+    for (const s of settled) {
+      if (s.status === "fulfilled" && s.value[0]) results.push(s.value[0]);
     }
 
     if (!results.length) return json({ error: "Angle generation failed" }, 502);

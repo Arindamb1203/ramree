@@ -160,7 +160,7 @@ export async function renderResult(view) {
       <div class="spinner"></div>
       <div>
         <div class="lb-title">Creating your look…</div>
-        <div class="lb-sub">Styling ${escapeHtml(p ? p.name : "your outfit")} on you</div>
+        <div class="lb-sub">Styling ${escapeHtml(p ? p.name : "your outfit")} on you.<br>This usually takes up to a minute — hang tight.</div>
       </div>
     </div>
   `;

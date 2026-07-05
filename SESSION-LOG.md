@@ -83,3 +83,21 @@ Bootstrap the entire Ramree app from the project spec: mobile-only AI dress-shop
 - `OPENAI_API_KEY` secret not yet set → AI angle views + try-on will error until added (`npx wrangler secret put OPENAI_API_KEY` or dashboard). Catalog/product/wishlist/buy all work without it.
 - Real product photos still needed (Unsplash placeholders in use).
 - The dashboard D1 binding the user was mid-adding is now redundant (wrangler.toml defines it); harmless either way.
+
+---
+
+## Session 3 — 2026-07-05 · OpenAI key live + slow-generation fix
+
+### Done
+- User added `OPENAI_API_KEY` as a Secret via the dashboard and deployed → AI features active. (Secrets persist across future `wrangler deploy`, so CLI redeploys won't wipe it.)
+
+### Problem: AI angle generation "taking too much time" (stuck on "Rendering")
+- **Cause:** `generate-angles.js` generated 3 images **sequentially**; gpt-image-1 at medium quality is ~50s/image → ~2.5 min total, felt frozen.
+- **Fixes:**
+  - Parallelized the 3 angle calls with `Promise.allSettled` (wall time ≈ one image instead of 3×).
+  - Angle quality dropped to **`low`** (`OPENAI_ANGLE_QUALITY`, default low) — previews are approximations, so faster + cheaper (~₹1-2/img). Try-on keeps default medium for realism.
+  - Honest loading copy: try-on "up to a minute", angle button "(up to ~30s)" so it doesn't read as frozen.
+- **Verified live:** `POST /api/generate-angles {"id":"kt-001"}` → HTTP 200, 3 images, ~54s at medium (pre-low-quality change). Confirms the OpenAI key works end-to-end.
+
+### Reality note
+- AI image latency (~30–50s) is inherent to gpt-image-1; parallelism + quality tuning + clear messaging is the mitigation, not elimination. Try-on is a single image so it will still take ~30–50s.

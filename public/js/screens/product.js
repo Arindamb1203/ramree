@@ -60,7 +60,7 @@ export async function render(view, { id }) {
   if (genBtn) {
     genBtn.addEventListener("click", async () => {
       genBtn.disabled = true;
-      genBtn.innerHTML = `<div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Rendering angles…`;
+      genBtn.innerHTML = `<div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Rendering angles… (up to ~30s)`;
       try {
         const res = await api.generateAngles(product.id);
         const gen = res.images || [];
