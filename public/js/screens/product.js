@@ -28,7 +28,8 @@ export async function render(view, { id }) {
     <div class="viewer" id="viewer">
       <div class="viewer-badge" id="badge">${SPIN_ICON} 360°</div>
       <button class="heart-btn" id="heart" aria-label="Add to wishlist">${HEART}</button>
-      <img id="frame" src="${escapeHtml(images[0] || "")}" alt="${escapeHtml(product.name)}">
+      <img class="v-frame" id="frameA" src="${escapeHtml(images[0] || "")}" alt="${escapeHtml(product.name)}">
+      <img class="v-frame" id="frameB" alt="" style="opacity:0">
       <button class="v-arrow left" id="prev" aria-label="Rotate left" ${hasAngles ? "" : "hidden"}>${CHEV_L}</button>
       <button class="v-arrow right" id="next" aria-label="Rotate right" ${hasAngles ? "" : "hidden"}>${CHEV_R}</button>
       ${hasAngles ? `<div class="rotate-hint" id="hint">${SPIN_ICON} Drag to rotate</div>` : ""}
@@ -86,19 +87,35 @@ function stockBadge(stock) {
 /* Advanced viewer: drag-to-rotate + arrow steps + one intro auto-spin. */
 function setupViewer(view, images, hasAngles) {
   const viewer = view.querySelector("#viewer");
-  const frame = view.querySelector("#frame");
+  const layers = [view.querySelector("#frameA"), view.querySelector("#frameB")];
   const dots = view.querySelector("#dots");
   const n = images.length;
   let idx = 0;
+  let top = 0;            // which layer is currently visible
   let introTimer = null;
 
   function renderDots() {
     if (!dots) return;
     dots.innerHTML = n > 1 ? images.map((_, i) => `<i class="${i === idx ? "on" : ""}"></i>`).join("") : "";
   }
+  // Instant swap (used while dragging — must stay responsive).
   function show(i) {
     idx = ((i % n) + n) % n;
-    frame.src = images[idx];
+    layers[top].src = images[idx];
+    layers[top].style.opacity = 1;
+    layers[1 - top].style.opacity = 0;
+    renderDots();
+  }
+  // Smooth crossfade (used by arrows + auto-spin — reads as slow rotation).
+  function showFade(i) {
+    idx = ((i % n) + n) % n;
+    const back = 1 - top;
+    layers[back].src = images[idx];
+    requestAnimationFrame(() => {
+      layers[back].style.opacity = 1;
+      layers[top].style.opacity = 0;
+      top = back;
+    });
     renderDots();
   }
   renderDots();
@@ -109,8 +126,8 @@ function setupViewer(view, images, hasAngles) {
   // Arrows (must run BEFORE the drag handler; drag ignores taps on them).
   const prev = view.querySelector("#prev");
   const next = view.querySelector("#next");
-  if (prev) prev.addEventListener("click", (e) => { e.stopPropagation(); stopIntro(); show(idx - 1); });
-  if (next) next.addEventListener("click", (e) => { e.stopPropagation(); stopIntro(); show(idx + 1); });
+  if (prev) prev.addEventListener("click", (e) => { e.stopPropagation(); stopIntro(); showFade(idx - 1); });
+  if (next) next.addEventListener("click", (e) => { e.stopPropagation(); stopIntro(); showFade(idx + 1); });
 
   // Drag-to-rotate. No pointer capture (that stole taps from the arrows);
   // instead we listen on window during an active drag and clean up on leave.
@@ -127,7 +144,7 @@ function setupViewer(view, images, hasAngles) {
   window.addEventListener("pointermove", onMove, { passive: true });
   window.addEventListener("pointerup", onUp);
 
-  // Intro auto-spin once all frames are decoded (so it doesn't flash blanks).
+  // Intro auto-spin (gentle) once all frames are decoded (no blank flashes).
   Promise.all(images.map((src) => new Promise((res) => {
     const im = new Image(); im.onload = im.onerror = res; im.src = src;
   }))).then(() => {
@@ -135,9 +152,9 @@ function setupViewer(view, images, hasAngles) {
     let spins = 0; const total = n + 1;
     introTimer = setInterval(() => {
       if (!viewerAlive()) return stopIntro();
-      show(idx + 1);
-      if (++spins >= total) { stopIntro(); show(0); }
-    }, 150);
+      showFade(idx + 1);
+      if (++spins >= total) { stopIntro(); showFade(0); }
+    }, 750);   // slow, cinematic cadence
   });
 
   function viewerAlive() { return document.body.contains(viewer); }
