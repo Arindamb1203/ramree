@@ -21,6 +21,16 @@ export async function urlToBlob(url) {
   return new Blob([buf], { type });
 }
 
+/* Convert a data URL into raw bytes + content type (for KV storage). */
+export function dataUrlToBytes(dataUrl) {
+  const m = /^data:([^;]+);base64,(.*)$/s.exec(dataUrl || "");
+  if (!m) throw new Error("Invalid image data");
+  const bin = atob(m[2]);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return { bytes, contentType: m[1] };
+}
+
 /* Convert a data URL (data:image/jpeg;base64,....) into a Blob. */
 export function dataUrlToBlob(dataUrl) {
   const m = /^data:([^;]+);base64,(.*)$/s.exec(dataUrl || "");

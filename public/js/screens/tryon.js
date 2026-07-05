@@ -179,7 +179,7 @@ export async function renderResult(view) {
     view.innerHTML = `
       <div class="empty">Couldn't create your look.<br><span class="muted">${escapeHtml(err.message)}</span></div>
       <div class="btn-row"><button class="btn btn-ghost" id="retry">Back</button></div>`;
-    view.querySelector("#retry").addEventListener("click", () => backTo("actions"));
+    view.querySelector("#retry").addEventListener("click", () => backTo("product"));
     return;
   } finally {
     // Discard the captured photo from memory immediately after sending.
@@ -207,8 +207,8 @@ export async function renderResult(view) {
   setupProtection(view);
 
   view.querySelector("#yes").addEventListener("click", () => go("postBuy", {}, { title: state.product.name }));
-  // "No" → return to the action screen where try-on was chosen
-  view.querySelector("#no").addEventListener("click", () => backTo("actions"));
+  // "No" → return to the product page where try-on was chosen
+  view.querySelector("#no").addEventListener("click", () => backTo("product"));
 }
 
 /* Soft screenshot deterrents: blur on tab/app switch, block drag/context menu. */

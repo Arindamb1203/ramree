@@ -4,9 +4,9 @@
 import { api } from "./api.js";
 import * as catalog from "./screens/catalog.js";
 import * as product from "./screens/product.js";
-import * as actions from "./screens/actions.js";
 import * as lead from "./screens/lead.js";
 import * as confirm from "./screens/confirm.js";
+import * as checkout from "./screens/checkout.js";
 import * as buy from "./screens/buy.js";
 import * as tryon from "./screens/tryon.js";
 
@@ -14,7 +14,8 @@ import * as tryon from "./screens/tryon.js";
 export const state = {
   product: null,     // currently viewed product
   action: null,      // 'wishlist' | 'buy' | 'tryon'
-  lead: null,        // { name, whatsapp_number }
+  lead: null,        // { name, whatsapp_number, local }
+  checkout: null,    // { qty, address }
 };
 
 /* ── DOM refs ── */
@@ -29,10 +30,10 @@ const screens = {
   catalog: catalog.render,
   category: catalog.renderCategory,
   product: product.render,
-  actions: actions.render,
   lead: lead.render,
   wishlistConfirm: confirm.renderWishlist,
   postBuy: confirm.renderPostBuy,          // buy/wishlist choice after a liked try-on
+  checkout: checkout.render,
   buy: buy.render,
   tryonCamera: tryon.renderCamera,
   tryonResult: tryon.renderResult,

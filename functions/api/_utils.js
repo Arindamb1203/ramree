@@ -38,12 +38,14 @@ export async function ensureTables(env) {
       id TEXT PRIMARY KEY, whatsapp_number TEXT NOT NULL, product_id TEXT NOT NULL, created_at TEXT NOT NULL)`,
     `CREATE TABLE IF NOT EXISTS orders (
       id TEXT PRIMARY KEY, whatsapp_number TEXT NOT NULL, product_id TEXT NOT NULL,
-      qty INTEGER NOT NULL DEFAULT 1, amount INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'demo-paid',
-      created_at TEXT NOT NULL)`,
+      qty INTEGER NOT NULL DEFAULT 1, amount INTEGER NOT NULL, address TEXT DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'demo-paid', created_at TEXT NOT NULL)`,
   ];
   for (const s of stmts) {
     try { await env.DB.prepare(s).run(); } catch (e) { /* exists */ }
   }
+  // Add columns introduced after first deploy (safe if they already exist).
+  try { await env.DB.prepare(`ALTER TABLE orders ADD COLUMN address TEXT DEFAULT ''`).run(); } catch (e) {}
 }
 
 export function parseImages(row) {

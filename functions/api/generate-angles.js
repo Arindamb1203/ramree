@@ -3,7 +3,7 @@
    Returns ephemeral data URLs (NOT persisted — regenerated on demand).
    These are generative approximations, not photos of the real garment's back/sides. */
 import { json, preflight, ensureTables, parseImages } from "./_utils.js";
-import { getModel, urlToBlob, imageEdit } from "./_openai.js";
+import { getModel, urlToBlob, imageEdit, dataUrlToBytes } from "./_openai.js";
 
 const ANGLE_PROMPTS = [
   "the same garment worn by the same model, rotated to a three-quarter left view, identical fabric, colour, print and lighting, clean studio background",
@@ -53,7 +53,29 @@ export async function onRequest(context) {
     }
 
     if (!results.length) return json({ error: "Angle generation failed" }, 502);
-    return json({ images: results, ai: true });
+
+    // Cache each generated image in KV and build stable /media URLs, so the
+    // product is generated ONCE — reused instantly & free on every later view.
+    const mediaUrls = [];
+    if (env.MEDIA_KV) {
+      for (let i = 0; i < results.length; i++) {
+        try {
+          const { bytes, contentType } = dataUrlToBytes(results[i]);
+          const key = `angle/${id}/${i + 1}`;
+          await env.MEDIA_KV.put(key, bytes, { metadata: { contentType } });
+          mediaUrls.push(`/media/${key}`);
+        } catch (e) { /* fall back to the ephemeral data URL below */ }
+      }
+    }
+
+    const finalImages = mediaUrls.length ? mediaUrls : results;
+    // Persist original + angle views on the product so 360° is default next time.
+    try {
+      const persisted = JSON.stringify([product.images[0], ...finalImages]);
+      await env.DB.prepare("UPDATE products SET images = ? WHERE id = ?").bind(persisted, id).run();
+    } catch (e) { /* non-fatal */ }
+
+    return json({ images: finalImages, ai: true });
   } catch (err) {
     return json({ error: err.message }, 500);
   }

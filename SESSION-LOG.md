@@ -101,3 +101,35 @@ Bootstrap the entire Ramree app from the project spec: mobile-only AI dress-shop
 
 ### Reality note
 - AI image latency (~30–50s) is inherent to gpt-image-1; parallelism + quality tuning + clear messaging is the mitigation, not elimination. Try-on is a single image so it will still take ~30–50s.
+
+---
+
+## Session 4 — 2026-07-05 · v2: caching, Misty Dawn redesign, advanced 360, checkout
+
+Driven by 4 pieces of user feedback: (1) can't rotate 360, wants advanced UI; (2) 360 should be default, no button; (3) app dull, wants Kurseong/Himalaya sophistication; (4) product page needs Try-It-On + Continue→full checkout (qty/address/phone).
+
+### Angle caching (fixes #2 + makes #1 possible)
+- R2 unavailable (account not activated) → used **KV** instead. Created namespace `MEDIA_KV` (id `2d903243f78542c5a3ef7a426c3a8cc7`), bound in `wrangler.toml`.
+- `generate-angles.js` now caches each generated PNG to KV (`angle/<id>/<n>`), persists `/media/...` URLs onto the product in D1, and returns them → **generated once, then instant & free forever**. Added `dataUrlToBytes` to `_openai.js`.
+- New Worker route `/media/*` in `src/index.js` serves cached images from KV with a 1-yr immutable cache header.
+- **Pre-warmed all 6 products** (3 angles each). `rk-002`'s Unsplash placeholder was a 404 → swapped for a working URL in D1 + `seed.sql`, then regenerated. Verified: `/media/angle/kt-001/1` → HTTP 200, 1.8 MB PNG; products return 4 images.
+
+### Design overhaul — "Misty Dawn Himalaya" (#3)
+- Full `styles.css` rewrite: cloud-cream / pine-ink / tea-sage / sunrise-gold palette, paper grain, refined shadows/radii.
+- Landing `catalog.js` now renders a layered **Kanchenjunga ridge SVG scene** with a soft sunrise sun + haze, serif brand lockup. Category tiles get a go-arrow + ridge motif; product cards show a 360° badge. `theme-color` → cream.
+
+### Advanced 360° viewer (#1)
+- `product.js` rewritten: drag-to-rotate **plus** left/right arrow buttons, dots, a one-time **intro auto-spin** to signal rotatability, frame preloading, and a "Drag to rotate" hint. Auto-active whenever a product has >1 image.
+- Single-photo products **auto-generate** angles on load (no button) with a "Preparing 360°…" chip, then upgrade to the AI-badged viewer.
+
+### Product CTAs + checkout (#4)
+- Product page: wishlist **heart** on the photo + two CTAs — **Try It On** (→ lead capture → camera) and **Continue** (→ checkout).
+- New `checkout.js`: quantity stepper (capped at stock), live order summary/total, name, WhatsApp, delivery address (street/city/PIN) → saves lead → `buy` (QR) → order.
+- `order.js` + schema + `_utils` ensureTables now store `address` (added column live via ALTER). `buy.js` uses qty×price and passes address. `lead.js` now routes only tryon/wishlist (buy goes via checkout). Removed dead `actions.js`; try-on "No"/error now `backTo("product")`. Registered `checkout` in `app.js`; added `state.checkout`.
+
+### Verified live
+- index/css/checkout.js → HTTP 200; kt-001 & rk-002 → 3 cached angle URLs each; test order (kt-002 ×2 w/ Kurseong address) → stored correctly, stock decremented. Test row + stock cleaned up afterward.
+
+### Notes / pending
+- KV-cached PNGs are ~1.8 MB each (medium... actually low quality). Fine for KV (25 MB value limit, 1 GB free storage).
+- Still: real product photos; phone end-to-end test of camera try-on with the new flow.

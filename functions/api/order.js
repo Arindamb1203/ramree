@@ -14,6 +14,7 @@ export async function onRequest(context) {
   const num = normNumber(body.whatsapp_number);
   const productId = String(body.product_id || "");
   const qty = Math.max(1, parseInt(body.qty, 10) || 1);
+  const address = String(body.address || "").slice(0, 400);
   if (num.length < 8 || !productId) return json({ error: "Missing fields" }, 400);
 
   await ensureTables(env);
@@ -37,8 +38,8 @@ export async function onRequest(context) {
     }
 
     await env.DB.prepare(
-      "INSERT INTO orders (id, whatsapp_number, product_id, qty, amount, status, created_at) VALUES (?, ?, ?, ?, ?, 'demo-paid', ?)"
-    ).bind(id, num, productId, qty, amount, now).run();
+      "INSERT INTO orders (id, whatsapp_number, product_id, qty, amount, address, status, created_at) VALUES (?, ?, ?, ?, ?, ?, 'demo-paid', ?)"
+    ).bind(id, num, productId, qty, amount, address, now).run();
 
     const newStock = product.stock - qty;
     return json({ ok: true, order_id: id, stock: newStock });

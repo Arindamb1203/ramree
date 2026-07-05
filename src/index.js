@@ -23,6 +23,19 @@ const ROUTES = {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    // Serve cached media (AI angle images) from KV.
+    if (url.pathname.startsWith("/media/")) {
+      if (!env.MEDIA_KV) return new Response("Not found", { status: 404 });
+      const key = decodeURIComponent(url.pathname.slice("/media/".length));
+      const obj = await env.MEDIA_KV.getWithMetadata(key, "arrayBuffer");
+      if (!obj || !obj.value) return new Response("Not found", { status: 404 });
+      const ct = (obj.metadata && obj.metadata.contentType) || "image/png";
+      return new Response(obj.value, {
+        headers: { "Content-Type": ct, "Cache-Control": "public, max-age=31536000, immutable" },
+      });
+    }
+
     const handler = ROUTES[url.pathname];
     if (handler) {
       // Handlers expect a Pages-style context object.

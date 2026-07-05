@@ -1,13 +1,18 @@
-/* Product detail — 360° drag viewer, or AI-generated angle views for single-photo items */
-import { api, state, go, rupee, escapeHtml, toast } from "../app.js";
+/* Product detail — advanced 360° viewer (drag + arrows + auto-spin),
+   wishlist heart, and Try It On / Continue CTAs. */
+import { api, state, go, onLeave, rupee, escapeHtml, toast } from "../app.js";
+
+const CHEV_L = `<svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const CHEV_R = `<svg viewBox="0 0 24 24" width="20" height="20"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const HEART = `<svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 20s-7-4.5-7-9.5A3.5 3.5 0 0112 7a3.5 3.5 0 017 3.5C19 15.5 12 20 12 20z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>`;
+const SPIN_ICON = `<svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 8c5 0 9 1.8 9 4s-4 4-9 4-9-1.8-9-4a3.4 3.4 0 011-2.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M4 9.8L3 12l2.4.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 export async function render(view, { id }) {
   view.innerHTML = `<div class="loading"><div class="spinner"></div><div class="lb-sub">Loading…</div></div>`;
 
   let product;
   try {
-    const res = await api.product(id);
-    product = res.product;
+    product = (await api.product(id)).product;
   } catch (err) {
     view.innerHTML = `<div class="empty">Couldn't load product.<br><span class="muted">${escapeHtml(err.message)}</span></div>`;
     return;
@@ -15,20 +20,21 @@ export async function render(view, { id }) {
   if (!product) { view.innerHTML = `<div class="empty">Product not found.</div>`; return; }
 
   state.product = product;
-  const images = Array.isArray(product.images) ? product.images.slice() : [];
-  const multi = images.length > 1;
+  let images = Array.isArray(product.images) ? product.images.slice() : [];
   const outOfStock = product.stock <= 0;
+  const hasAngles = images.length > 1;
 
   view.innerHTML = `
     <div class="viewer" id="viewer">
-      <div class="viewer-badge${multi ? "" : ""}" id="badge" ${multi ? "" : 'hidden'}>
-        <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zm0 0v18M3 12h18" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
-        360°
-      </div>
+      <div class="viewer-badge" id="badge">${SPIN_ICON} 360°</div>
+      <button class="heart-btn" id="heart" aria-label="Add to wishlist">${HEART}</button>
       <img id="frame" src="${escapeHtml(images[0] || "")}" alt="${escapeHtml(product.name)}">
-      ${multi ? `<div class="rotate-hint"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M4 12a8 8 0 018-8M20 12a8 8 0 01-8 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg> Drag to rotate</div>` : ""}
+      <button class="v-arrow left" id="prev" aria-label="Rotate left" ${hasAngles ? "" : "hidden"}>${CHEV_L}</button>
+      <button class="v-arrow right" id="next" aria-label="Rotate right" ${hasAngles ? "" : "hidden"}>${CHEV_R}</button>
+      ${hasAngles ? `<div class="rotate-hint" id="hint">${SPIN_ICON} Drag to rotate</div>` : ""}
     </div>
     <div class="dots" id="dots"></div>
+    ${hasAngles ? `<div class="hint" style="text-align:center;margin-top:2px;">Rotate to explore · additional angles are AI-rendered approximations</div>` : `<div class="hint" id="prep" style="text-align:center;margin-top:2px;">${SPIN_ICON} Preparing 360° view…</div>`}
 
     <div class="pd-head">
       <div class="pd-name">${escapeHtml(product.name)}</div>
@@ -37,51 +43,38 @@ export async function render(view, { id }) {
     <div class="pd-desc">${escapeHtml(product.description || "")}</div>
     ${stockBadge(product.stock)}
 
-    ${!multi ? `
-      <div class="btn-row">
-        <button class="btn btn-ghost" id="genBtn">
-          <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 2l1.6 4.6L18 8l-4.4 1.4L12 14l-1.6-4.6L6 8l4.4-1.4L12 2z" fill="currentColor"/></svg>
-          Generate 360° view with AI
-        </button>
-      </div>
-      <div class="hint">AI-rendered views are generative approximations of other angles — not photographs of the actual garment's back or sides.</div>
-    ` : ""}
-
-    <div class="btn-row">
-      <button class="btn btn-primary" id="continueBtn" ${outOfStock ? "disabled" : ""}>
-        ${outOfStock ? "Out of stock" : "Continue"}
+    <div class="btn-row btn-2">
+      <button class="btn btn-rose" id="tryon" ${outOfStock ? "disabled" : ""}>
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zm-7 8a7 7 0 0114 0" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+        Try It On
+      </button>
+      <button class="btn btn-primary" id="continue" ${outOfStock ? "disabled" : ""}>
+        ${outOfStock ? "Sold out" : "Continue"}
       </button>
     </div>
   `;
 
-  setupViewer(view, images, multi);
+  const viewer = setupViewer(view, images, hasAngles);
 
-  const genBtn = view.querySelector("#genBtn");
-  if (genBtn) {
-    genBtn.addEventListener("click", async () => {
-      genBtn.disabled = true;
-      genBtn.innerHTML = `<div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Rendering angles… (up to ~30s)`;
-      try {
-        const res = await api.generateAngles(product.id);
-        const gen = res.images || [];
-        const all = images.concat(gen);           // original first, then AI angles
-        state.product.images = all;
-        state.product.aiAngles = true;
-        // rebuild viewer with AI badge
-        rebuildAsAiViewer(view, all);
-        toast("AI angle views ready");
-      } catch (err) {
-        toast(err.message || "Generation failed");
-        genBtn.disabled = false;
-        genBtn.innerHTML = `Generate 360° view with AI`;
-      }
-    });
-  }
-
-  view.querySelector("#continueBtn").addEventListener("click", () => {
-    if (product.stock <= 0) return;
-    go("actions", { id: product.id }, { title: product.name });
+  // Wishlist heart → capture details, then save
+  view.querySelector("#heart").addEventListener("click", () => {
+    state.action = "wishlist";
+    go("lead", { action: "wishlist" }, { title: "Wishlist" });
   });
+
+  view.querySelector("#tryon").addEventListener("click", () => {
+    if (outOfStock) return;
+    state.action = "tryon";
+    go("lead", { action: "tryon" }, { title: "Try It On" });
+  });
+  view.querySelector("#continue").addEventListener("click", () => {
+    if (outOfStock) return;
+    state.action = "buy";
+    go("checkout", {}, { title: "Checkout" });
+  });
+
+  // Single-photo product → auto-generate angles (no button, per spec) and upgrade.
+  if (!hasAngles) autoGenerate(view, product);
 }
 
 function stockBadge(stock) {
@@ -90,18 +83,18 @@ function stockBadge(stock) {
   return `<div class="stock"><span class="dot"></span> In stock · ${stock} available</div>`;
 }
 
-/* Drag-to-rotate across image frames */
-function setupViewer(view, images, multi) {
+/* Advanced viewer: drag-to-rotate + arrow steps + one intro auto-spin. */
+function setupViewer(view, images, hasAngles) {
   const viewer = view.querySelector("#viewer");
   const frame = view.querySelector("#frame");
   const dots = view.querySelector("#dots");
-  let idx = 0;
   const n = images.length;
+  let idx = 0;
+  let introTimer = null;
 
   function renderDots() {
     if (!dots) return;
-    if (n <= 1) { dots.innerHTML = ""; return; }
-    dots.innerHTML = images.map((_, i) => `<i class="${i === idx ? "on" : ""}"></i>`).join("");
+    dots.innerHTML = n > 1 ? images.map((_, i) => `<i class="${i === idx ? "on" : ""}"></i>`).join("") : "";
   }
   function show(i) {
     idx = ((i % n) + n) % n;
@@ -109,38 +102,56 @@ function setupViewer(view, images, multi) {
     renderDots();
   }
   renderDots();
+  if (!hasAngles || n <= 1) return { show };
 
-  if (n <= 1) return;
+  // Preload for smooth rotation
+  images.forEach((src) => { const im = new Image(); im.src = src; });
 
+  const prev = view.querySelector("#prev");
+  const next = view.querySelector("#next");
+  prev && prev.addEventListener("click", () => { stopIntro(); show(idx - 1); });
+  next && next.addEventListener("click", () => { stopIntro(); show(idx + 1); });
+
+  // Drag
   let dragging = false, startX = 0, startIdx = 0;
-  const stepPx = 26; // px of drag per frame change
-
-  function down(x) { dragging = true; startX = x; startIdx = idx; viewer.classList.add("dragging"); }
-  function move(x) {
-    if (!dragging) return;
-    const delta = Math.round((x - startX) / stepPx);
-    show(startIdx + delta);
-  }
+  const stepPx = 24;
+  function down(x) { stopIntro(); dragging = true; startX = x; startIdx = idx; viewer.classList.add("dragging"); }
+  function move(x) { if (dragging) show(startIdx + Math.round((x - startX) / stepPx)); }
   function up() { dragging = false; viewer.classList.remove("dragging"); }
-
   viewer.addEventListener("pointerdown", (e) => { down(e.clientX); viewer.setPointerCapture(e.pointerId); });
   viewer.addEventListener("pointermove", (e) => move(e.clientX));
   viewer.addEventListener("pointerup", up);
   viewer.addEventListener("pointercancel", up);
+
+  // Intro auto-spin: cycle once through all frames to signal it's rotatable.
+  let spins = 0;
+  const total = n * 1 + 1;
+  introTimer = setInterval(() => { show(idx + 1); if (++spins >= total) stopIntro(); }, 160);
+  function stopIntro() { if (introTimer) { clearInterval(introTimer); introTimer = null; show(0); } }
+  onLeave(() => { if (introTimer) clearInterval(introTimer); });
+
+  return { show };
 }
 
-function rebuildAsAiViewer(view, images) {
-  const viewer = view.querySelector("#viewer");
-  viewer.innerHTML = `
-    <div class="viewer-badge ai" id="badge">
-      <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 2l1.6 4.6L18 8l-4.4 1.4L12 14l-1.6-4.6L6 8l4.4-1.4L12 2z" fill="currentColor"/></svg>
-      AI-rendered view
-    </div>
-    <img id="frame" src="${escapeHtml(images[0])}" alt="">
-    <div class="rotate-hint"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M4 12a8 8 0 018-8M20 12a8 8 0 01-8 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg> Drag to rotate</div>
-  `;
-  // remove the generate button
-  const gb = view.querySelector("#genBtn");
-  if (gb) gb.closest(".btn-row").remove();
-  setupViewer(view, images, true);
+async function autoGenerate(view, product) {
+  try {
+    const res = await api.generateAngles(product.id);
+    const gen = res.images || [];
+    if (!gen.length) throw new Error("no angles");
+    const all = [product.images[0], ...gen];
+    state.product.images = all;
+    // Rebuild the viewer area with the new frames + AI badge
+    const badge = view.querySelector("#badge");
+    if (badge) badge.classList.add("ai"), (badge.innerHTML = `${SPIN_ICON} 360° · AI`);
+    view.querySelector("#prev").hidden = false;
+    view.querySelector("#next").hidden = false;
+    const prep = view.querySelector("#prep");
+    if (prep) prep.textContent = "Rotate to explore · additional angles are AI-rendered approximations";
+    setupViewer(view, all, true);
+  } catch (e) {
+    const prep = view.querySelector("#prep");
+    if (prep) prep.remove();
+    const badge = view.querySelector("#badge");
+    if (badge) badge.remove();
+  }
 }

@@ -16,6 +16,12 @@ binding = "DB"
 database_name = "ramree-db"
 database_id = "f6375c7e-ccfe-428c-8e85-95e065967bdd"
 
+# Caches AI-generated angle images (served via /media/<key>) so they're
+# generated once per product, then reused instantly and free.
+[[kv_namespaces]]
+binding = "MEDIA_KV"
+id = "2d903243f78542c5a3ef7a426c3a8cc7"
+
 # Secrets (set once via `npx wrangler secret put OPENAI_API_KEY`, or in the dashboard):
 #   OPENAI_API_KEY       — required for AI angle views + try-on
 #   OPENAI_IMAGE_MODEL   — optional, "gpt-image-1" (default) or "gpt-image-1.5"

@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS orders (
   product_id      TEXT NOT NULL,
   qty             INTEGER NOT NULL DEFAULT 1,
   amount          INTEGER NOT NULL,
+  address         TEXT DEFAULT '',
   status          TEXT NOT NULL DEFAULT 'demo-paid',
   created_at      TEXT NOT NULL
 );

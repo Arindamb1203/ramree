@@ -1,14 +1,15 @@
 /* Name + WhatsApp capture — common step before wishlist / buy / try-on */
 import { api, state, go, toast, escapeHtml } from "../app.js";
 
-const ACTION_LABEL = { tryon: "try it on", buy: "buy", wishlist: "save to wishlist" };
+const ACTION_LABEL = { tryon: "start your AI try-on", wishlist: "save to wishlist" };
+const ACTION_TITLE = { tryon: "Before we begin", wishlist: "Save your pick" };
 
 export async function render(view, { action }) {
   const pre = state.lead || {};
   view.innerHTML = `
     <div class="eyebrow">Your details</div>
-    <h1 class="display" style="font-size:30px;">A few details</h1>
-    <div class="lead">We'll use your WhatsApp number to ${ACTION_LABEL[action] || "continue"} and keep your ${action === "wishlist" ? "wishlist" : "order"} handy.</div>
+    <h1 class="display" style="font-size:30px;">${ACTION_TITLE[action] || "A few details"}</h1>
+    <div class="lead">We'll use your WhatsApp number to ${ACTION_LABEL[action] || "continue"} and keep your ${action === "wishlist" ? "wishlist" : "session"} handy.</div>
 
     <div class="field">
       <label for="nm">Your name</label>
@@ -58,6 +59,7 @@ export async function render(view, { action }) {
 
 function routeByAction(action) {
   if (action === "wishlist") return go("wishlistConfirm", {}, { title: "Wishlist" });
-  if (action === "buy") return go("buy", {}, { title: "Payment" });
   if (action === "tryon") return go("tryonCamera", {}, { title: "Try It On" });
+  // buy is handled by the checkout screen, not here
+  return go("checkout", {}, { title: "Checkout" });
 }

@@ -52,8 +52,8 @@ export async function renderPostBuy(view) {
     el.addEventListener("click", () => {
       const key = el.dataset.key;
       state.action = key;
-      // Lead already captured earlier in the flow — go straight to branch.
-      if (key === "buy") go("buy", {}, { title: "Payment" });
+      // Lead already captured earlier in the flow.
+      if (key === "buy") go("checkout", {}, { title: "Checkout" });
       else go("wishlistConfirm", {}, { title: "Wishlist" });
     });
   });

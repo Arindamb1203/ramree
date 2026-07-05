@@ -8,7 +8,9 @@ const PAYEE = "Ramree";
 
 export async function render(view) {
   const p = state.product, lead = state.lead;
-  const amount = p ? p.price : 0;
+  const co = state.checkout || { qty: 1 };
+  const qty = co.qty || 1;
+  const amount = p ? p.price * qty : 0;
 
   // Build a UPI deep link and render it as a QR via a public QR image service (demo).
   const upi = `upi://pay?pa=${encodeURIComponent(UPI_ID)}&pn=${encodeURIComponent(PAYEE)}&am=${amount}&cu=INR&tn=${encodeURIComponent("Ramree order")}`;
@@ -17,7 +19,7 @@ export async function render(view) {
   view.innerHTML = `
     <div class="eyebrow">Payment · Demo</div>
     <h1 class="display" style="font-size:30px;">Scan to pay</h1>
-    <div class="lead">${escapeHtml(p ? p.name : "")}</div>
+    <div class="lead">${escapeHtml(p ? p.name : "")}${qty > 1 ? ` · Qty ${qty}` : ""}</div>
 
     <div class="qr-wrap">
       <div class="qr-card"><img src="${qrSrc}" alt="Payment QR" width="220" height="220"></div>
@@ -39,8 +41,9 @@ export async function render(view) {
       const res = await api.createOrder({
         whatsapp_number: lead.whatsapp_number,
         product_id: p.id,
-        qty: 1,
+        qty,
         amount,
+        address: co.address || "",
       });
       if (res && typeof res.stock === "number") state.product.stock = res.stock;
       showConfirmed(view, res && res.order_id);

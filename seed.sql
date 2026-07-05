@@ -20,4 +20,4 @@ INSERT INTO products (id, category, name, description, price, stock, images, cre
   ('rk-001','rayon-kurti-sets','Floral Rayon Kurti Set','Printed rayon kurti with matching pants.',1699,5,
      '["https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=900"]', '2026-07-04T00:00:00Z'),
   ('rk-002','rayon-kurti-sets','Solid Rayon A-Line Set','A-line silhouette in a solid jewel tone.',1899,7,
-     '["https://images.unsplash.com/photo-1583391733956-6c78276477e2?w=900"]', '2026-07-04T00:00:00Z');
+     '["https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=900"]', '2026-07-04T00:00:00Z');
