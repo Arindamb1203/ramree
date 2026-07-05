@@ -3,6 +3,22 @@
    API key comes from env.OPENAI_API_KEY — never exposed to the client. */
 
 const OPENAI_EDITS_URL = "https://api.openai.com/v1/images/edits";
+const OPENAI_GEN_URL = "https://api.openai.com/v1/images/generations";
+
+/* Text-to-image generation. Returns an array of data URLs (PNG). */
+export async function imageGenerate({ apiKey, model, prompt, size = "1536x1024", quality = "medium", n = 1 }) {
+  const res = await fetch(OPENAI_GEN_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model, prompt, size, quality, n }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const msg = (data && data.error && data.error.message) || `OpenAI error (${res.status})`;
+    throw new Error(msg);
+  }
+  return ((data && data.data) || []).map((d) => `data:image/png;base64,${d.b64_json}`);
+}
 
 export function getModel(env) {
   return env.OPENAI_IMAGE_MODEL || "gpt-image-1";

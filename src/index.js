@@ -9,6 +9,7 @@ import { onRequest as order } from "../functions/api/order.js";
 import { onRequest as optout } from "../functions/api/optout.js";
 import { onRequest as generateAngles } from "../functions/api/generate-angles.js";
 import { onRequest as tryon } from "../functions/api/tryon.js";
+import { onRequest as admin } from "../functions/api/admin.js";
 
 const ROUTES = {
   "/api/products": products,
@@ -18,6 +19,7 @@ const ROUTES = {
   "/api/optout": optout,
   "/api/generate-angles": generateAngles,
   "/api/tryon": tryon,
+  "/api/admin": admin,
 };
 
 export default {

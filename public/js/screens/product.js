@@ -104,31 +104,49 @@ function setupViewer(view, images, hasAngles) {
   renderDots();
   if (!hasAngles || n <= 1) return { show };
 
-  // Preload for smooth rotation
-  images.forEach((src) => { const im = new Image(); im.src = src; });
+  function stopIntro() { if (introTimer) { clearInterval(introTimer); introTimer = null; } }
 
+  // Arrows (must run BEFORE the drag handler; drag ignores taps on them).
   const prev = view.querySelector("#prev");
   const next = view.querySelector("#next");
-  prev && prev.addEventListener("click", () => { stopIntro(); show(idx - 1); });
-  next && next.addEventListener("click", () => { stopIntro(); show(idx + 1); });
+  if (prev) prev.addEventListener("click", (e) => { e.stopPropagation(); stopIntro(); show(idx - 1); });
+  if (next) next.addEventListener("click", (e) => { e.stopPropagation(); stopIntro(); show(idx + 1); });
 
-  // Drag
+  // Drag-to-rotate. No pointer capture (that stole taps from the arrows);
+  // instead we listen on window during an active drag and clean up on leave.
   let dragging = false, startX = 0, startIdx = 0;
-  const stepPx = 24;
-  function down(x) { stopIntro(); dragging = true; startX = x; startIdx = idx; viewer.classList.add("dragging"); }
-  function move(x) { if (dragging) show(startIdx + Math.round((x - startX) / stepPx)); }
-  function up() { dragging = false; viewer.classList.remove("dragging"); }
-  viewer.addEventListener("pointerdown", (e) => { down(e.clientX); viewer.setPointerCapture(e.pointerId); });
-  viewer.addEventListener("pointermove", (e) => move(e.clientX));
-  viewer.addEventListener("pointerup", up);
-  viewer.addEventListener("pointercancel", up);
+  const stepPx = 22;
+  function onDown(e) {
+    if (e.target.closest(".v-arrow") || e.target.closest(".heart-btn")) return;
+    stopIntro(); dragging = true; startX = e.clientX; startIdx = idx;
+    viewer.classList.add("dragging");
+  }
+  function onMove(e) { if (dragging) show(startIdx + Math.round((e.clientX - startX) / stepPx)); }
+  function onUp() { if (dragging) { dragging = false; viewer.classList.remove("dragging"); } }
+  viewer.addEventListener("pointerdown", onDown);
+  window.addEventListener("pointermove", onMove, { passive: true });
+  window.addEventListener("pointerup", onUp);
 
-  // Intro auto-spin: cycle once through all frames to signal it's rotatable.
-  let spins = 0;
-  const total = n * 1 + 1;
-  introTimer = setInterval(() => { show(idx + 1); if (++spins >= total) stopIntro(); }, 160);
-  function stopIntro() { if (introTimer) { clearInterval(introTimer); introTimer = null; show(0); } }
-  onLeave(() => { if (introTimer) clearInterval(introTimer); });
+  // Intro auto-spin once all frames are decoded (so it doesn't flash blanks).
+  Promise.all(images.map((src) => new Promise((res) => {
+    const im = new Image(); im.onload = im.onerror = res; im.src = src;
+  }))).then(() => {
+    if (!viewerAlive()) return;
+    let spins = 0; const total = n + 1;
+    introTimer = setInterval(() => {
+      if (!viewerAlive()) return stopIntro();
+      show(idx + 1);
+      if (++spins >= total) { stopIntro(); show(0); }
+    }, 150);
+  });
+
+  function viewerAlive() { return document.body.contains(viewer); }
+
+  onLeave(() => {
+    stopIntro();
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+  });
 
   return { show };
 }

@@ -7,6 +7,9 @@ const ICON360 = `<svg viewBox="0 0 24 24" width="12" height="12"><path d="M12 8c
 export async function render(view) {
   view.innerHTML = `
     <div class="scene">
+      <img class="scene-photo" alt="" src="/media/hero/1"
+           onload="this.closest('.scene').classList.add('has-photo')"
+           onerror="this.remove()">
       <div class="sun"></div>
       <svg class="ridges" viewBox="0 0 480 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
         <path d="M0 210 L70 150 L120 185 L190 120 L250 170 L320 110 L400 175 L480 140 L480 300 L0 300 Z" fill="#b9c8bd" opacity=".55"/>

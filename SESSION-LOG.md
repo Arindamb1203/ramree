@@ -133,3 +133,32 @@ Driven by 4 pieces of user feedback: (1) can't rotate 360, wants advanced UI; (2
 ### Notes / pending
 - KV-cached PNGs are ~1.8 MB each (medium... actually low quality). Fine for KV (25 MB value limit, 1 GB free storage).
 - Still: real product photos; phone end-to-end test of camera try-on with the new flow.
+
+---
+
+## Session 5 — 2026-07-05 · Fix 360 arrows, pose guide, real-photo upload, AI Kurseong hero
+
+User feedback: (1) 360 arrows don't work + AI angles look wrong → wants to upload real 360 photos; (2) try-on pose guide "unavailable"; (3) landing should use AI-generated Kurseong imagery (AI-made = no copyright).
+
+### Pose guide fix (#2)
+- Root cause: the ESM `+esm` TF.js import didn't register the WebGL backend on mobile → `loadPoseDetector` threw → "pose guide unavailable".
+- Rewrote `pose.js` to inject the official **UMD** builds via ordered `<script>` tags (tfjs-core, converter, backend-webgl, pose-detection@2.1.3), then `tf.setBackend("webgl")` + `createDetector(MoveNet Lightning)`. Verified the CDN scripts return 200.
+
+### 360 viewer fix (#1)
+- Root cause: `viewer.setPointerCapture()` on pointerdown captured the pointer to the viewer, so taps never reached the arrow buttons; `stopIntro()` also reset to frame 0.
+- Rewrote the interaction in `product.js`: arrows have their own `click` (with `stopPropagation`); drag ignores pointerdowns that start on `.v-arrow`/`.heart-btn`; move/up listen on `window` (no capture) with `onLeave` cleanup; intro auto-spin waits for all frames to decode, checks the viewer is still mounted, and doesn't fight user input.
+
+### Real product photos — Admin (#1 real fix)
+- Added `functions/api/admin.js` (POST, protected by **ADMIN_KEY** secret): actions `list`, `hero` (generate AI Kurseong images), `product-images` (store uploaded photos in KV `photo/<id>/...`, set as the product's images → replaces AI angles with real 360). Routed `/api/admin` in `src/index.js`.
+- Added `_openai.js` `imageGenerate` (text-to-image via images/generations).
+- New **`public/admin.html`** (served at `/admin`, `.html` dropped by Workers): password gate (localStorage), product list, multi-file picker that **downscales to ~1200px JPEG client-side** before upload, and a "Generate landing image" button. Set `ADMIN_KEY` secret = `ramree-8ac1249ffb45` (via `wrangler secret put`).
+
+### AI Kurseong landing (#3)
+- `admin` `hero` action generates an original Kurseong dawn scene (tea gardens + Kanchenjunga) via gpt-image-1, caches to KV `hero/1`. Generated it → `/media/hero/1` (HTTP 200, 2 MB).
+- `catalog.js` scene now loads `/media/hero/1` as a background photo (`onload` adds `.has-photo` → hides the SVG ridge fallback, switches brand text to light + adds a legibility veil); `onerror` falls back to the ridge illustration.
+
+### Verified
+- Deploy OK (bindings incl. MEDIA_KV). `/admin` 200; admin `list` works with key, wrong key → 401; hero image serves; pose UMD scripts 200.
+
+### Reality note to convey
+- AI angle 360 will always look imperfect (independent generations, not a true turntable). The real 360 comes from **uploading multiple real photos per product at /admin** — that's now the recommended path; AI angles remain only a fallback for products with a single photo.
