@@ -46,10 +46,22 @@ export async function ensureTables(env) {
   }
   // Add columns introduced after first deploy (safe if they already exist).
   try { await env.DB.prepare(`ALTER TABLE orders ADD COLUMN address TEXT DEFAULT ''`).run(); } catch (e) {}
+  const productCols = [
+    `ALTER TABLE products ADD COLUMN cost INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE products ADD COLUMN colors TEXT NOT NULL DEFAULT '[]'`,
+    `ALTER TABLE products ADD COLUMN sizes TEXT NOT NULL DEFAULT '[]'`,
+    `ALTER TABLE products ADD COLUMN rating REAL NOT NULL DEFAULT 0`,
+    `ALTER TABLE products ADD COLUMN review_count INTEGER NOT NULL DEFAULT 0`,
+  ];
+  for (const s of productCols) { try { await env.DB.prepare(s).run(); } catch (e) {} }
 }
 
 export function parseImages(row) {
-  let images = [];
-  try { images = JSON.parse(row.images || "[]"); } catch (e) { images = []; }
-  return { ...row, images };
+  const parse = (v) => { try { const a = JSON.parse(v || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; } };
+  return {
+    ...row,
+    images: parse(row.images),
+    colors: parse(row.colors),
+    sizes: parse(row.sizes),
+  };
 }

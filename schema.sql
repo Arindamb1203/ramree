@@ -8,8 +8,13 @@ CREATE TABLE IF NOT EXISTS products (
   category      TEXT NOT NULL,              -- 'korean-tshirts' | 'korean-tops' | 'rayon-kurti-sets'
   name          TEXT NOT NULL,
   description    TEXT DEFAULT '',
-  price          INTEGER NOT NULL,          -- in INR, whole rupees
+  price          INTEGER NOT NULL,          -- selling price, INR whole rupees
+  cost           INTEGER NOT NULL DEFAULT 0,-- unit cost (admin only, for P&L)
   stock          INTEGER NOT NULL DEFAULT 0,
+  colors         TEXT NOT NULL DEFAULT '[]',-- JSON array e.g. ["Beige","Black"]
+  sizes          TEXT NOT NULL DEFAULT '[]',-- JSON array e.g. ["S","M","L"]
+  rating         REAL NOT NULL DEFAULT 0,   -- avg review 0..5
+  review_count   INTEGER NOT NULL DEFAULT 0,
   images         TEXT NOT NULL DEFAULT '[]',-- JSON array of image URLs (1..n angles)
   created_at     TEXT NOT NULL
 );
