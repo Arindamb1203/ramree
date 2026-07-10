@@ -5,159 +5,623 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ramree · Admin</title>
   <style>
-    :root { --ink:#22302a; --ink2:#5c6b60; --line:#e5e1d5; --gold:#a9861a; --pine:#3c5344; --cream:#f6f4ef; --surface:#fffdf9; }
+    :root { --ink:#22302a; --ink2:#5c6b60; --line:#e5e1d5; --gold:#a9861a; --pine:#3c5344; --pinedk:#2c4033; --cream:#f6f4ef; --surface:#fffdf9; --err:#b0503f; --ok:#2e7d43; }
     * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
     body { margin:0; font-family:"Inter",system-ui,sans-serif; background:var(--cream); color:var(--ink); }
-    .wrap { max-width:560px; margin:0 auto; padding:20px 16px 60px; }
-    h1 { font-family:Georgia,serif; font-weight:600; font-size:26px; margin:4px 0 2px; }
-    .sub { color:var(--ink2); font-size:14px; margin-bottom:18px; }
-    .card { background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px; box-shadow:0 6px 18px -10px rgba(34,48,42,.25); }
-    label { display:block; font-size:13px; font-weight:600; color:var(--ink2); margin-bottom:6px; }
-    input[type=text], input[type=password] { width:100%; font-size:16px; padding:13px 14px; border:1px solid var(--line); border-radius:11px; background:#fff; color:var(--ink); }
-    .btn { appearance:none; border:none; cursor:pointer; font-size:15px; font-weight:600; padding:13px 16px; border-radius:12px; width:100%; }
-    .btn-pine { background:var(--pine); color:#f4f1e8; } .btn-gold { background:var(--gold); color:#2a2206; }
+    .wrap { max-width:640px; margin:0 auto; padding:18px 15px 70px; }
+    h1 { font-family:Georgia,serif; font-weight:600; font-size:24px; margin:2px 0; }
+    h2 { font-family:Georgia,serif; font-weight:600; font-size:19px; margin:0 0 12px; }
+    .sub { color:var(--ink2); font-size:13.5px; }
+    .card { background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px; box-shadow:0 6px 18px -12px rgba(34,48,42,.25); }
+    label { display:block; font-size:12.5px; font-weight:600; color:var(--ink2); margin:12px 0 5px; }
+    input, select, textarea { width:100%; font-size:16px; padding:12px 13px; border:1px solid var(--line); border-radius:11px; background:#fff; color:var(--ink); font-family:inherit; }
+    textarea { resize:vertical; }
+    .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .btn { appearance:none; border:none; cursor:pointer; font-size:15px; font-weight:600; padding:12px 16px; border-radius:12px; width:100%; margin-top:14px; }
+    .btn-pine { background:var(--pinedk); color:#f4f1e8; } .btn-gold { background:var(--gold); color:#2a2206; }
     .btn-ghost { background:#fff; border:1px solid var(--line); color:var(--ink); }
+    .btn-danger { background:#fff; border:1px solid var(--err); color:var(--err); }
+    .btn.small { width:auto; padding:9px 13px; font-size:13.5px; margin-top:0; }
     .btn:disabled { opacity:.5; }
-    .row { display:flex; gap:12px; align-items:center; }
-    .thumb { width:56px; height:70px; object-fit:cover; border-radius:9px; background:#eee; flex:0 0 auto; }
-    .pname { font-weight:600; font-size:15px; } .pmeta { color:var(--ink2); font-size:12.5px; margin-top:2px; }
-    .muted { color:var(--ink2); font-size:12.5px; }
-    .status { font-size:13px; margin-top:8px; }
-    .ok { color:#2e7d43; } .err { color:#b0503f; }
-    .prev { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
-    .prev img { width:46px; height:58px; object-fit:cover; border-radius:7px; border:1px solid var(--line); }
+    .link { background:none; border:none; color:var(--gold); font-weight:600; cursor:pointer; font-size:13.5px; padding:6px; }
+    .status { font-size:13px; margin-top:10px; } .ok { color:var(--ok); } .err { color:var(--err); }
     .hidden { display:none; }
-    .hint { font-size:12px; color:var(--ink2); margin-top:8px; line-height:1.5; }
-    hr { border:none; border-top:1px solid var(--line); margin:22px 0; }
+    .muted { color:var(--ink2); font-size:12.5px; }
+    .tabs { display:flex; gap:6px; overflow-x:auto; margin:14px 0 16px; padding-bottom:4px; }
+    .tab { flex:0 0 auto; padding:9px 14px; border-radius:999px; border:1px solid var(--line); background:var(--surface); font-size:13.5px; font-weight:600; cursor:pointer; color:var(--ink2); }
+    .tab.on { background:var(--pinedk); color:#f4f1e8; border-color:var(--pinedk); }
+    .topbar { display:flex; align-items:center; justify-content:space-between; }
+    .prow { display:flex; gap:12px; align-items:center; }
+    .thumb { width:52px; height:66px; object-fit:cover; border-radius:9px; background:#eee; flex:0 0 auto; }
+    .pname { font-weight:600; font-size:14.5px; } .pmeta { color:var(--ink2); font-size:12px; margin-top:2px; }
+    .prev { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+    .prev img { width:42px; height:54px; object-fit:cover; border-radius:7px; border:1px solid var(--line); }
+    .kpis { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .kpi { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px; }
+    .kpi .v { font-family:Georgia,serif; font-size:24px; font-weight:600; } .kpi .k { font-size:12px; color:var(--ink2); margin-top:2px; }
+    .kpi.profit .v { color:var(--ok); }
+    table { width:100%; border-collapse:collapse; font-size:13px; margin-top:6px; }
+    th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); }
+    th { color:var(--ink2); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.5px; }
+    td.num, th.num { text-align:right; }
+    .codebox { background:#2c4033; color:#f4f1e8; padding:12px 14px; border-radius:11px; font-family:monospace; font-size:15px; letter-spacing:1px; text-align:center; margin-top:8px; }
+    .divider { height:1px; background:var(--line); margin:16px 0; }
+
+    /* Dashboard */
+    .kpis3 { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+    .kpi.big { grid-column:span 2; background:linear-gradient(135deg,var(--pinedk),#22332a); color:#f4f1e8; border:none; }
+    .kpi.big .v { color:#fff; font-size:30px; } .kpi.big .k { color:#c7d3c7; }
+    .catcard { background:var(--surface); border:1px solid var(--line); border-radius:14px; margin-bottom:10px; overflow:hidden; }
+    .cathead { display:flex; align-items:center; gap:10px; padding:14px; cursor:pointer; }
+    .cathead .cname { font-weight:600; font-size:15px; flex:1; }
+    .cathead .cnums { text-align:right; font-size:12px; color:var(--ink2); line-height:1.5; }
+    .cathead .cnums b { color:var(--ink); font-size:13.5px; }
+    .caret { transition:transform .2s; color:var(--ink2); flex:0 0 auto; }
+    .catcard.open .caret { transform:rotate(90deg); }
+    .catbody { display:none; padding:0 12px 12px; }
+    .catcard.open .catbody { display:block; }
+    .pstat { border-top:1px solid var(--line); padding:10px 2px; }
+    .pstat .pn { font-weight:600; font-size:13.5px; margin-bottom:6px; }
+    .statgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px 8px; }
+    .statgrid .s { font-size:11px; color:var(--ink2); } .statgrid .s b { display:block; color:var(--ink); font-size:13px; font-weight:600; margin-top:1px; }
+    .statgrid .s.pos b { color:var(--ok); }
+
+    /* Analytics */
+    .alert { border-left:3px solid var(--gold); background:#fbf7ea; border-radius:10px; padding:11px 13px; margin-bottom:9px; }
+    .alert.buy { border-color:var(--pine); background:#eef3ee; }
+    .alert.low { border-color:var(--err); background:#faeeeb; }
+    .alert .ah { display:flex; justify-content:space-between; gap:8px; align-items:baseline; }
+    .alert .an { font-weight:600; font-size:14px; } .alert .aq { font-weight:700; color:var(--pinedk); font-size:14px; white-space:nowrap; }
+    .alert .ar { font-size:12px; color:var(--ink2); margin-top:2px; }
+    .pill { display:inline-block; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; padding:2px 7px; border-radius:999px; }
+    .pill.fast { background:#e4f0e6; color:var(--ok); } .pill.slow { background:#f3eede; color:#8a6d14; } .pill.dead { background:#eee; color:#777; }
+    .mrow { display:flex; align-items:center; gap:9px; padding:9px 0; border-bottom:1px solid var(--line); font-size:13px; }
+    .mrow .mn { flex:1; font-weight:500; } .mrow .mm { color:var(--ink2); font-size:12px; white-space:nowrap; }
+    .seclead { font-size:12.5px; color:var(--ink2); margin:-4px 0 12px; }
+
+    /* Upload / camera */
+    .bigbtn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; width:100%; padding:30px 16px; border:2px dashed var(--line-2,#d8d3c4); border-radius:18px; background:var(--surface); color:var(--pinedk); cursor:pointer; }
+    .bigbtn svg { width:42px; height:42px; }
+    .bigbtn .t { font-family:Georgia,serif; font-size:19px; font-weight:600; } .bigbtn .d { font-size:12.5px; color:var(--ink2); }
+    .steps { display:flex; gap:6px; margin:14px 0 6px; }
+    .steps .dot { flex:1; height:6px; border-radius:3px; background:var(--line); } .steps .dot.done { background:var(--ok); } .steps .dot.on { background:var(--gold); }
+    .cam-wrap { position:relative; width:100%; aspect-ratio:3/4; background:#111; border-radius:16px; overflow:hidden; }
+    .cam-wrap video { width:100%; height:100%; object-fit:cover; }
+    .pose-frame { position:absolute; inset:8% 18%; border:2.5px dashed rgba(255,255,255,.55); border-radius:120px/180px; pointer-events:none; transition:border-color .2s; }
+    .pose-frame.good { border-color:#57e08a; border-style:solid; }
+    .cam-fb { position:absolute; left:0; right:0; bottom:0; padding:12px; text-align:center; color:#fff; font-size:14px; font-weight:600; background:linear-gradient(transparent,rgba(0,0,0,.6)); }
+    .cam-fb.good { color:#9ff0b8; }
+    .cam-side { position:absolute; top:10px; left:0; right:0; text-align:center; color:#fff; font-weight:700; font-size:15px; text-shadow:0 1px 4px rgba(0,0,0,.6); }
+    .shots { display:flex; gap:8px; margin-top:12px; }
+    .shots .sh { flex:1; aspect-ratio:3/4; border-radius:9px; background:#f0ede4; border:1px solid var(--line); overflow:hidden; display:grid; place-items:center; color:var(--ink3,#8a9389); font-size:11px; }
+    .shots .sh img { width:100%; height:100%; object-fit:cover; }
+    .shots .sh .lbl { position:absolute; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>Ramree · Admin</h1>
-    <div class="sub">Upload real product photos & manage the landing image.</div>
 
-    <div class="card" id="authCard">
-      <label for="key">Admin password</label>
-      <input type="password" id="key" placeholder="Paste your admin password" autocomplete="off" />
-      <div style="height:10px"></div>
-      <button class="btn btn-pine" id="login">Unlock</button>
-      <div class="status err" id="authErr"></div>
-    </div>
+    <!-- ══ AUTH ══ -->
+    <div id="authWrap">
+      <h1>Ramree · Admin</h1>
+      <div class="sub" id="authSub">Sign in to manage your store.</div>
 
-    <div id="panel" class="hidden">
-      <div class="card">
-        <div class="pname">🏔️ Landing image (Kurseong, AI-generated)</div>
-        <div class="pmeta">Generates an original AI Kurseong scene for the home screen background (no copyright risk).</div>
-        <div style="height:12px"></div>
-        <button class="btn btn-gold" id="genHero">Generate landing image (~30s)</button>
-        <div class="status" id="heroStatus"></div>
+      <!-- Login -->
+      <div class="card" id="loginView">
+        <h2>Sign in</h2>
+        <label>Username</label><input id="li_user" autocomplete="username">
+        <label>Password</label><input id="li_pass" type="password" autocomplete="current-password">
+        <button class="btn btn-pine" id="li_go">Sign in</button>
+        <div class="status err" id="li_err"></div>
+        <div style="margin-top:10px; display:flex; justify-content:space-between;">
+          <button class="link" id="toForgot">Forgot password?</button>
+          <button class="link" id="toSetup">First-time setup</button>
+        </div>
       </div>
 
-      <hr>
-      <div class="muted" style="margin-bottom:10px;">Products — upload multiple angles per item for a real 360°. Photos are shown in the order you pick them.</div>
-      <div id="products"></div>
+      <!-- Setup owner -->
+      <div class="card hidden" id="setupView">
+        <h2>Create owner account</h2>
+        <div class="muted">One-time. Needs the setup key (your ADMIN_KEY).</div>
+        <label>Setup key</label><input id="su_key" type="password">
+        <label>Choose a username</label><input id="su_user">
+        <label>Choose a password (6+ chars)</label><input id="su_pass" type="password">
+        <label>Registered phone (for future OTP reset)</label><input id="su_phone" inputmode="numeric" placeholder="+91…">
+        <button class="btn btn-pine" id="su_go">Create account</button>
+        <div class="status" id="su_msg"></div>
+        <button class="link" id="setupBack">← Back to sign in</button>
+      </div>
+
+      <!-- Forgot -->
+      <div class="card hidden" id="forgotView">
+        <h2>Reset password</h2>
+        <div class="muted">Enter your recovery code to set a new password.</div>
+        <label>Username</label><input id="fp_user">
+        <label>Recovery code</label><input id="fp_code" placeholder="RAMREE-XXXX-XXXX">
+        <label>New password</label><input id="fp_pass" type="password">
+        <button class="btn btn-pine" id="fp_go">Reset password</button>
+        <div class="status" id="fp_msg"></div>
+        <button class="link" id="forgotBack">← Back to sign in</button>
+      </div>
+    </div>
+
+    <!-- ══ APP ══ -->
+    <div id="appWrap" class="hidden">
+      <div class="topbar">
+        <h1>Ramree · Admin</h1>
+        <button class="btn btn-ghost small" id="logout">Sign out</button>
+      </div>
+      <div class="sub" id="whoami"></div>
+
+      <div class="tabs" id="tabs">
+        <div class="tab on" data-tab="dashboard">Dashboard</div>
+        <div class="tab" data-tab="analytics">Analytics</div>
+        <div class="tab" data-tab="upload">Upload</div>
+        <div class="tab" data-tab="products">Products</div>
+        <div class="tab" data-tab="staff" id="staffTab">Staff</div>
+        <div class="tab" data-tab="settings">Settings</div>
+      </div>
+
+      <div id="sec-dashboard" class="sec"></div>
+      <div id="sec-analytics" class="sec hidden"></div>
+      <div id="sec-upload" class="sec hidden"></div>
+      <div id="sec-products" class="sec hidden"></div>
+      <div id="sec-staff" class="sec hidden"></div>
+      <div id="sec-settings" class="sec hidden"></div>
     </div>
   </div>
 
   <script>
-    const $ = (s, r=document) => r.querySelector(s);
-    let KEY = localStorage.getItem("ramree_admin_key") || "";
+  const $ = (s, r=document) => r.querySelector(s);
+  const el = (h) => { const d = document.createElement("div"); d.innerHTML = h.trim(); return d.firstElementChild; };
+  let TOKEN = localStorage.getItem("ramree_token") || "";
+  let ME = null;
+  let CATS = [];
 
-    async function callAdmin(payload) {
-      const res = await fetch("/api/admin", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: KEY, ...payload }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
-      return data;
+  async function authApi(payload) { return post("/api/admin-auth", payload); }
+  async function adminApi(payload) { return post("/api/admin", { token: TOKEN, ...payload }); }
+  async function post(url, payload) {
+    const res = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json", ...(TOKEN?{Authorization:"Bearer "+TOKEN}:{}) }, body: JSON.stringify(payload) });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok) throw new Error(data.error || ("HTTP "+res.status));
+    return data;
+  }
+  function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
+
+  // Downscale image file → JPEG data URL
+  function fileToDataUrl(file, max=1200, q=0.85){
+    return new Promise((resolve,reject)=>{ const img=new Image(); const u=URL.createObjectURL(file);
+      img.onload=()=>{ let{width:w,height:h}=img; if(w>h&&w>max){h=Math.round(h*max/w);w=max;} else if(h>=w&&h>max){w=Math.round(w*max/h);h=max;}
+        const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);URL.revokeObjectURL(u);resolve(c.toDataURL("image/jpeg",q)); };
+      img.onerror=()=>{URL.revokeObjectURL(u);reject(new Error("Bad image"));}; img.src=u; });
+  }
+
+  /* ── Auth views ── */
+  function showAuth(which){ ["loginView","setupView","forgotView"].forEach(v=>$("#"+v).classList.toggle("hidden", v!==which)); }
+  $("#toSetup").onclick=()=>showAuth("setupView"); $("#setupBack").onclick=()=>showAuth("loginView");
+  $("#toForgot").onclick=()=>showAuth("forgotView"); $("#forgotBack").onclick=()=>showAuth("loginView");
+
+  $("#li_go").onclick=async()=>{ $("#li_err").textContent="";
+    try{ const r=await authApi({action:"login",username:$("#li_user").value,password:$("#li_pass").value});
+      TOKEN=r.token; localStorage.setItem("ramree_token",TOKEN); ME=r.admin; enterApp(); }
+    catch(e){ $("#li_err").textContent=e.message; } };
+
+  $("#su_go").onclick=async()=>{ const m=$("#su_msg"); m.className="status"; m.textContent="Creating…";
+    try{ const r=await authApi({action:"bootstrap",key:$("#su_key").value,username:$("#su_user").value,password:$("#su_pass").value,phone:$("#su_phone").value});
+      TOKEN=r.token; localStorage.setItem("ramree_token",TOKEN); ME=r.admin;
+      m.className="status ok"; m.innerHTML="✓ Account created. <b>Save your recovery code:</b>";
+      $("#setupView").appendChild(el(`<div class="codebox">${r.recovery_code}</div>`));
+      $("#setupView").appendChild(el(`<button class="btn btn-pine" id="su_enter">I saved it — continue</button>`));
+      $("#su_enter").onclick=enterApp; }
+    catch(e){ m.className="status err"; m.textContent=e.message; } };
+
+  $("#fp_go").onclick=async()=>{ const m=$("#fp_msg"); m.className="status"; m.textContent="Resetting…";
+    try{ const r=await authApi({action:"forgot",username:$("#fp_user").value,recovery_code:$("#fp_code").value,new_password:$("#fp_pass").value});
+      m.className="status ok"; m.innerHTML="✓ Password reset. New recovery code (save it):";
+      $("#forgotView").appendChild(el(`<div class="codebox">${r.recovery_code}</div>`)); }
+    catch(e){ m.className="status err"; m.textContent=e.message; } };
+
+  $("#logout").onclick=async()=>{ try{await authApi({action:"logout"});}catch(e){} TOKEN=""; localStorage.removeItem("ramree_token"); location.reload(); };
+
+  /* ── App ── */
+  async function enterApp(){
+    $("#authWrap").classList.add("hidden"); $("#appWrap").classList.remove("hidden");
+    $("#whoami").textContent = `Signed in as ${ME.username} (${ME.role})`;
+    if (ME.role!=="owner") $("#staffTab").classList.add("hidden");
+    try { const c = await fetch("/api/products?categories=1").then(r=>r.json()); CATS = c.categories||[]; } catch(e){}
+    loadDashboard(); loadAnalytics(); loadUpload(); loadProducts(); loadSettings(); if(ME.role==="owner") loadStaff();
+  }
+
+  $("#tabs").addEventListener("click",(e)=>{ const t=e.target.closest(".tab"); if(!t)return;
+    if(t.dataset.tab!=="upload" && camState){ try{camState();}catch(err){} camState=null; loadUpload(); }
+    $$(".tab").forEach(x=>x.classList.remove("on")); t.classList.add("on");
+    $$(".sec").forEach(s=>s.classList.add("hidden")); $("#sec-"+t.dataset.tab).classList.remove("hidden"); });
+  function $$(s){ return [...document.querySelectorAll(s)]; }
+
+  const catOptions = (sel) => (CATS.length?CATS:[{slug:"korean-tshirts",name:"Korean T-Shirts"},{slug:"korean-tops",name:"Korean Tops"},{slug:"rayon-kurti-sets",name:"Rayon Kurti Sets"}])
+    .map(c=>`<option value="${c.slug}" ${c.slug===sel?"selected":""}>${c.name}</option>`).join("");
+
+  /* Products list + inline edit + photos */
+  async function loadProducts(){
+    const box=$("#sec-products"); box.innerHTML=`<div class="muted">Loading…</div>`;
+    try{
+      const {products}=await adminApi({action:"list"}); box.innerHTML="";
+      if(!products.length) box.innerHTML=`<div class="muted">No products yet. Add one from the Upload tab.</div>`;
+      products.forEach(p=>box.appendChild(productCard(p)));
+    }catch(e){ box.innerHTML=`<div class="status err">${e.message}</div>`; }
+  }
+
+  function productCard(p){
+    const c=el(`<div class="card">
+      <div class="prow">
+        <img class="thumb" src="${p.images[0]||""}">
+        <div style="flex:1"><div class="pname">${p.name}</div>
+          <div class="pmeta">${p.category} · ${money(p.price)} · stock ${p.stock} · ${p.images.length} photo(s)</div></div>
+        <button class="btn btn-ghost small edit">Edit</button>
+      </div>
+      <div class="editArea hidden"></div>
+    </div>`);
+    c.querySelector(".edit").onclick=()=>{ const a=c.querySelector(".editArea"); a.classList.toggle("hidden"); if(!a.dataset.built){ a.appendChild(editForm(p,c)); a.dataset.built="1"; } };
+    return c;
+  }
+
+  function editForm(p,card){
+    const f=el(`<div>
+      <div class="divider"></div>
+      <label>Name</label><input class="e_name" value="${escAttr(p.name)}">
+      <div class="row2"><div><label>Category</label><select class="e_cat">${catOptions(p.category)}</select></div>
+      <div><label>Stock</label><input class="e_stock" inputmode="numeric" value="${p.stock}"></div></div>
+      <div class="row2"><div><label>Price ₹</label><input class="e_price" inputmode="numeric" value="${p.price}"></div>
+      <div><label>Cost ₹ (private)</label><input class="e_cost" inputmode="numeric" value="${p.cost||0}"></div></div>
+      <label>Colours (comma separated)</label><input class="e_colors" value="${escAttr((p.colors||[]).join(', '))}">
+      <label>Sizes (comma separated)</label><input class="e_sizes" value="${escAttr((p.sizes||[]).join(', '))}">
+      <label>Description</label><textarea class="e_desc" rows="2">${escHtml(p.description||"")}</textarea>
+      <button class="btn btn-pine save">Save changes</button>
+      <div class="status save_msg"></div>
+      <div class="divider"></div>
+      <label>Replace photos — pick several in rotation order (this sets the 360°)</label>
+      <input type="file" class="e_files" accept="image/*" multiple>
+      <div class="prev"></div>
+      <button class="btn btn-ghost up" disabled>Upload photos</button>
+      <div class="status up_msg"></div>
+      <div class="divider"></div>
+      <button class="btn btn-danger del">Delete product</button>
+    </div>`);
+    const g=(s)=>f.querySelector(s);
+    g(".save").onclick=async()=>{ const m=g(".save_msg"); m.className="status"; m.textContent="Saving…";
+      try{ await adminApi({action:"product-save", product:{ id:p.id, name:g(".e_name").value, category:g(".e_cat").value,
+        price:g(".e_price").value, cost:g(".e_cost").value, stock:g(".e_stock").value,
+        colors:splitList(g(".e_colors").value), sizes:splitList(g(".e_sizes").value), description:g(".e_desc").value }});
+        m.className="status ok"; m.textContent="✓ Saved"; loadProducts(); loadDashboard(); }
+      catch(e){ m.className="status err"; m.textContent=e.message; } };
+    let dataUrls=[];
+    g(".e_files").onchange=async()=>{ const prev=g(".prev"); prev.innerHTML=""; dataUrls=[];
+      for(const file of [...g(".e_files").files].slice(0,12)){ try{ const d=await fileToDataUrl(file); dataUrls.push(d); const im=new Image(); im.src=d; prev.appendChild(im);}catch(e){} }
+      g(".up").disabled=dataUrls.length===0; };
+    g(".up").onclick=async()=>{ const m=g(".up_msg"); m.className="status"; m.textContent="Uploading…"; g(".up").disabled=true;
+      try{ const r=await adminApi({action:"product-images", product_id:p.id, images:dataUrls}); m.className="status ok"; m.textContent="✓ "+r.images.length+" photos set. Refresh shop to see 360°."; loadProducts(); }
+      catch(e){ m.className="status err"; m.textContent=e.message; g(".up").disabled=false; } };
+    g(".del").onclick=async()=>{ if(!confirm("Delete "+p.name+"?"))return; try{ await adminApi({action:"product-delete", id:p.id}); loadProducts(); }catch(e){ alert(e.message);} };
+    return f;
+  }
+
+  /* ══ DASHBOARD ══ */
+  async function loadDashboard(){
+    const box=$("#sec-dashboard"); box.innerHTML=`<div class="muted">Loading…</div>`;
+    try{
+      const r=await adminApi({action:"dashboard"}); const t=r.totals;
+      box.innerHTML=`
+        <div class="kpis3">
+          <div class="kpi big"><div class="v">${money(t.invest)}</div><div class="k">Total Invest — money put into stock</div></div>
+          <div class="kpi big"><div class="v">${money(t.earning)}</div><div class="k">Total Earning — sales revenue</div></div>
+          <div class="kpi profit"><div class="v">${money(t.profit)}</div><div class="k">Profit so far</div></div>
+          <div class="kpi"><div class="v">${money(t.stock_value)}</div><div class="k">Stock value · ${t.in_stock} units</div></div>
+        </div>
+        <h2>By category</h2>
+        <div class="seclead">Tap a category to see each product’s numbers.</div>
+        <div id="catlist"></div>`;
+      const list=$("#catlist");
+      if(!r.categories.length){ list.innerHTML=`<div class="muted">No products yet. Add one from the Upload tab.</div>`; return; }
+      r.categories.forEach(c=>list.appendChild(catCard(c)));
+    }catch(e){ box.innerHTML=`<div class="status err">${e.message}</div>`; }
+  }
+  function catCard(c){
+    const el2=el(`<div class="catcard">
+      <div class="cathead">
+        <div class="cname">${escHtml(c.name)}</div>
+        <div class="cnums"><b>${money(c.sale)}</b> sold · <b>${c.sold}</b> pcs<br>${c.stock} in stock · ${money(c.cost)} invested</div>
+        <svg class="caret" viewBox="0 0 24 24" width="18" height="18"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="catbody">${c.products.map(pStat).join("")}</div>
+    </div>`);
+    el2.querySelector(".cathead").onclick=()=>el2.classList.toggle("open");
+    return el2;
+  }
+  function pStat(p){
+    return `<div class="pstat"><div class="pn">${escHtml(p.name)}</div>
+      <div class="statgrid">
+        <div class="s">Purchased<b>${p.purchased}</b></div>
+        <div class="s">In stock<b>${p.stock}</b></div>
+        <div class="s">Sold<b>${p.sold}</b></div>
+        <div class="s">Cost<b>${money(p.cost)}</b></div>
+        <div class="s">Sale<b>${money(p.sale)}</b></div>
+        <div class="s ${p.profit>=0?'pos':''}">Profit<b>${money(p.profit)}</b></div>
+      </div></div>`;
+  }
+
+  /* ══ ANALYTICS ══ */
+  async function loadAnalytics(){
+    const box=$("#sec-analytics"); box.innerHTML=`<div class="muted">Loading…</div>`;
+    try{
+      const r=await adminApi({action:"analytics"});
+      const PILL={fast:"Fast",slow:"Slow",dead:"Idle"};
+      const movePill=(cls)=>`<span class="pill ${cls}">${PILL[cls]||cls}</span>`;
+      const buySec = r.reorder.length ? `
+        <div class="card"><h2>What to buy</h2>
+          <div class="seclead">Based on how fast these are selling and how little stock is left.</div>
+          ${r.reorder.map(x=>`<div class="alert buy"><div class="ah"><span class="an">${escHtml(x.name)}</span><span class="aq">+${x.recommend_qty} pcs</span></div>
+            <div class="ar">${escHtml(x.reason)} · selling ~${x.rate.toFixed(1)}/day${x.est_cost?` · ≈${money(x.est_cost)} to restock`:""}</div></div>`).join("")}
+          ${r.reorder_total_cost?`<div class="muted" style="margin-top:8px;">Estimated restock spend: <b>${money(r.reorder_total_cost)}</b></div>`:""}
+        </div>` : `<div class="card"><h2>What to buy</h2><div class="muted">Nothing urgent — stock levels look healthy for current demand.</div></div>`;
+      const lowSec = r.low_stock.length ? `
+        <div class="card"><h2>Low stock ⚠️</h2>
+          ${r.low_stock.map(x=>`<div class="alert low"><div class="ah"><span class="an">${escHtml(x.name)}</span><span class="aq">${x.stock} left</span></div>
+            <div class="ar">${x.sold_win} sold in last ${r.window_days} days</div></div>`).join("")}
+        </div>` : "";
+      const movers = (title,arr,cls)=> `<div class="card"><h2>${title}</h2>${
+        arr.length ? arr.map(x=>`<div class="mrow">${movePill(cls)}<span class="mn">${escHtml(x.name)}</span><span class="mm">${x.sold_win} in ${r.window_days}d · ${x.stock} left</span></div>`).join("")
+        : `<div class="muted">None.</div>`}</div>`;
+      const most = `<div class="card"><h2>Most sold (all time)</h2>${
+        r.most_sold.length ? r.most_sold.map((x,i)=>`<div class="mrow"><span class="mm">#${i+1}</span><span class="mn">${escHtml(x.name)}</span><span class="mm">${x.sold_all} pcs</span></div>`).join("")
+        : `<div class="muted">No sales yet.</div>`}</div>`;
+      box.innerHTML = `<div class="seclead" style="margin-top:0;">Movement over the last ${r.window_days} days.</div>` + buySec + lowSec
+        + movers("Fast moving", r.fast, "fast")
+        + movers("Slow moving", r.slow, "slow")
+        + (r.dead.length ? movers("Not selling", r.dead, "dead") : "")
+        + most;
+    }catch(e){ box.innerHTML=`<div class="status err">${e.message}</div>`; }
+  }
+
+  /* ══ UPLOAD (guided camera) ══ */
+  const SIDES = [
+    { key:"front", label:"Front",       turn:"Face the camera" },
+    { key:"right", label:"Right side",  turn:"Turn to your RIGHT (side profile)" },
+    { key:"back",  label:"Back",        turn:"Turn around — show your BACK" },
+    { key:"left",  label:"Left side",   turn:"Turn to your LEFT (side profile)" },
+  ];
+  let SHOTS = [];      // captured (beautified) data URLs, index-aligned to SIDES
+  let camState = null; // active camera controller
+
+  function loadUpload(){
+    SHOTS = [];
+    const box=$("#sec-upload");
+    box.innerHTML=`
+      <div class="card">
+        <h2>Add a product</h2>
+        <div class="seclead" style="margin-bottom:14px;">The model wears the dress; we guide the shot and capture all four sides for a smooth 360°.</div>
+        <button class="bigbtn" id="up_start">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8a2 2 0 012-2h1.5l1-1.5h5l1 1.5H21a0 0 0 010 0" stroke-linecap="round"/><rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="4"/></svg>
+          <span class="t">Open camera</span>
+          <span class="d">Guided 4-side capture</span>
+        </button>
+        <div style="text-align:center;margin-top:12px;">
+          <button class="link" id="up_gallery">or pick photos from gallery</button>
+          <input type="file" id="up_files" accept="image/*" multiple hidden>
+        </div>
+      </div>`;
+    $("#up_start").onclick=()=>startCapture(0);
+    $("#up_gallery").onclick=()=>$("#up_files").click();
+    $("#up_files").onchange=async()=>{ const files=[...$("#up_files").files].slice(0,4); if(!files.length)return;
+      SHOTS=[]; for(const f of files){ try{ SHOTS.push(await beautifyFile(f)); }catch(e){} } showDetails(); };
+  }
+
+  /* Beautify: light auto-enhance + downscale (keeps the site fast/light). */
+  function enhanceCanvasToDataUrl(source, sw, sh){
+    const max=1080; let w=sw, h=sh;
+    if(w>h&&w>max){h=Math.round(h*max/w);w=max;} else if(h>=w&&h>max){w=Math.round(w*max/h);h=max;}
+    const c=document.createElement("canvas"); c.width=w; c.height=h;
+    const ctx=c.getContext("2d");
+    try{ ctx.filter="brightness(1.06) contrast(1.05) saturate(1.07)"; }catch(e){}
+    ctx.drawImage(source,0,0,w,h);
+    return c.toDataURL("image/jpeg",0.82);
+  }
+  function beautifyFile(file){
+    return new Promise((res,rej)=>{ const img=new Image(); const u=URL.createObjectURL(file);
+      img.onload=()=>{ const d=enhanceCanvasToDataUrl(img,img.width,img.height); URL.revokeObjectURL(u); res(d); };
+      img.onerror=()=>{URL.revokeObjectURL(u);rej(new Error("Bad image"));}; img.src=u; });
+  }
+
+  /* Pose detector (lazy CDN load, mirrors the shop try-on) */
+  let _detector=null;
+  const POSE_SCRIPTS=[
+    "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.22.0/dist/tf-core.min.js",
+    "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@4.22.0/dist/tf-converter.min.js",
+    "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.22.0/dist/tf-backend-webgl.min.js",
+    "https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js",
+  ];
+  function loadScript(src){ return new Promise((res,rej)=>{ if(document.querySelector(`script[src="${src}"]`))return res();
+    const s=document.createElement("script"); s.src=src; s.async=false; s.onload=res; s.onerror=()=>rej(new Error("load "+src)); document.head.appendChild(s); }); }
+  async function getDetector(){ if(_detector)return _detector;
+    for(const s of POSE_SCRIPTS) await loadScript(s);
+    const tf=window.tf, pd=window.poseDetection; if(!tf||!pd) throw new Error("pose libs");
+    try{ await tf.setBackend("webgl"); }catch(e){} await tf.ready();
+    _detector=await pd.createDetector(pd.SupportedModels.MoveNet,{modelType:pd.movenet.modelType.SINGLEPOSE_LIGHTNING});
+    return _detector; }
+  // Full-body framing check for the FRONT shot (nose+shoulders+hips visible, centred, upright).
+  function checkPose(kp,vw,vh){
+    if(!kp) return {ok:false,msg:"Looking for the model…"};
+    const S=0.35, g=i=>kp[i], vis=i=>g(i)&&g(i).score>=S;
+    if(!vis(5)||!vis(6)) return {ok:false,msg:"Step into the frame"};
+    const smx=(g(5).x+g(6).x)/2, cx=smx/vw;
+    if(cx<0.32) return {ok:false,msg:"Move to your right"};
+    if(cx>0.68) return {ok:false,msg:"Move to your left"};
+    if(!vis(11)&&!vis(12)) return {ok:false,msg:"Step back — fit the whole body in"};
+    const sw=Math.abs(g(5).x-g(6).x)/vw;
+    if(sw>0.6) return {ok:false,msg:"Move back a little"};
+    if(sw<0.14) return {ok:false,msg:"Come a little closer"};
+    return {ok:true,msg:"Perfect — hold still"};
+  }
+
+  async function startCapture(idx){
+    const box=$("#sec-upload");
+    const side=SIDES[idx];
+    box.innerHTML=`
+      <div class="card">
+        <div class="steps">${SIDES.map((s,i)=>`<div class="dot ${i<idx?'done':i===idx?'on':''}"></div>`).join("")}</div>
+        <h2 style="margin-bottom:2px;">Shot ${idx+1} of 4 · ${side.label}</h2>
+        <div class="seclead">${side.turn}</div>
+        <div class="cam-wrap" id="camWrap">
+          <video id="v" playsinline muted autoplay></video>
+          <div class="cam-side">${side.label}</div>
+          <div class="pose-frame" id="frame"></div>
+          <div class="cam-fb" id="fb">Starting camera…</div>
+        </div>
+        <button class="btn btn-pine" id="cap" disabled>Hold the pose…</button>
+        <button class="link" id="cancelCap" style="display:block;margin:8px auto 0;">Cancel</button>
+      </div>`;
+    const v=$("#v"), fb=$("#fb"), frame=$("#frame"), cap=$("#cap");
+    let stream=null, raf=null, running=true, last=0, goodSince=0, manual=false;
+    const started=performance.now();
+    const front=side.key==="front";
+    const MANUAL_AFTER=front?6000:2200; // side/back: pose won't lock, allow manual fast
+
+    function cleanup(){ running=false; if(raf)cancelAnimationFrame(raf); if(stream)stream.getTracks().forEach(t=>t.stop()); }
+    camState=cleanup;
+    $("#cancelCap").onclick=()=>{ cleanup(); loadUpload(); };
+
+    function grab(){
+      cleanup();
+      const w=v.videoWidth||810, h=v.videoHeight||1080;
+      SHOTS[idx]=enhanceCanvasToDataUrl(v,w,h);
+      if(idx+1<SIDES.length) startCapture(idx+1); else showDetails();
     }
+    function enableManual(){ if(manual)return; manual=true; cap.disabled=false; cap.textContent="Capture now"; cap.onclick=grab; }
 
-    // Downscale an image File to a JPEG data URL (keeps uploads light & fast).
-    function fileToDataUrl(file, max = 1200, quality = 0.85) {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        const url = URL.createObjectURL(file);
-        img.onload = () => {
-          let { width: w, height: h } = img;
-          if (w > h && w > max) { h = Math.round(h * max / w); w = max; }
-          else if (h >= w && h > max) { w = Math.round(w * max / h); h = max; }
-          const c = document.createElement("canvas"); c.width = w; c.height = h;
-          c.getContext("2d").drawImage(img, 0, 0, w, h);
-          URL.revokeObjectURL(url);
-          resolve(c.toDataURL("image/jpeg", quality));
-        };
-        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Bad image")); };
-        img.src = url;
-      });
+    const dims={width:{ideal:810},height:{ideal:1080}};
+    try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},...dims},audio:false}); }
+    catch(e){ try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",...dims},audio:false}); }
+      catch(e2){ fb.textContent="Camera unavailable"; return; } }
+    let front_cam=false; try{ const fm=stream.getVideoTracks()[0]?.getSettings?.().facingMode; front_cam=(fm==="user"); }catch(e){}
+    v.style.transform=front_cam?"scaleX(-1)":"none";
+    v.srcObject=stream; await v.play().catch(()=>{});
+
+    let usePose=front;
+    if(front){
+      fb.textContent="Loading guide…";
+      try{ await getDetector(); }catch(e){ usePose=false; }
     }
+    if(!usePose){ fb.textContent="Tap Capture when the "+side.label.toLowerCase()+" looks good"; enableManual(); }
+    else fb.textContent="Step into the frame";
 
-    async function loadProducts() {
-      const { products } = await callAdmin({ action: "list" });
-      const wrap = $("#products"); wrap.innerHTML = "";
-      products.forEach((p) => {
-        const el = document.createElement("div");
-        el.className = "card";
-        el.innerHTML = `
-          <div class="row">
-            <img class="thumb" src="${p.first || ""}" alt="">
-            <div style="flex:1">
-              <div class="pname">${p.name}</div>
-              <div class="pmeta">${p.category} · ${p.image_count} image(s)</div>
-            </div>
-          </div>
-          <div style="height:12px"></div>
-          <label>Choose photos (you can select several)</label>
-          <input type="file" accept="image/*" multiple class="file">
-          <div class="prev"></div>
-          <div style="height:10px"></div>
-          <button class="btn btn-ghost up" disabled>Upload & set as 360°</button>
-          <div class="status"></div>
-        `;
-        const fileInput = $(".file", el), prev = $(".prev", el), upBtn = $(".up", el), status = $(".status", el);
-        let dataUrls = [];
-        fileInput.addEventListener("change", async () => {
-          prev.innerHTML = ""; dataUrls = []; status.textContent = "Preparing…";
-          const files = [...fileInput.files].slice(0, 12);
-          for (const f of files) {
-            try { const d = await fileToDataUrl(f); dataUrls.push(d); const im = document.createElement("img"); im.src = d; prev.appendChild(im); } catch (e) {}
-          }
-          status.textContent = dataUrls.length + " photo(s) ready";
-          upBtn.disabled = dataUrls.length === 0;
-        });
-        upBtn.addEventListener("click", async () => {
-          upBtn.disabled = true; status.className = "status"; status.textContent = "Uploading…";
-          try {
-            const r = await callAdmin({ action: "product-images", product_id: p.id, images: dataUrls });
-            status.className = "status ok"; status.textContent = "✓ Saved " + r.images.length + " photos. Refresh the shop to see the 360°.";
-          } catch (e) { status.className = "status err"; status.textContent = e.message; upBtn.disabled = false; }
-        });
-        wrap.appendChild(el);
-      });
-    }
-
-    async function enter() {
-      try {
-        localStorage.setItem("ramree_admin_key", KEY);
-        await callAdmin({ action: "list" });     // validates the key
-        $("#authCard").classList.add("hidden");
-        $("#panel").classList.remove("hidden");
-        loadProducts();
-      } catch (e) {
-        $("#authErr").textContent = e.message;
+    async function loop(ts){
+      if(!running)return;
+      if(usePose && ts-last>150 && v.videoWidth){
+        last=ts; let res;
+        try{ const poses=await _detector.estimatePoses(v,{flipHorizontal:false}); res=checkPose(poses&&poses[0]?poses[0].keypoints:null,v.videoWidth,v.videoHeight); }
+        catch(e){ res={ok:false,msg:"Adjusting…"}; }
+        fb.textContent=res.msg; fb.classList.toggle("good",res.ok); frame.classList.toggle("good",res.ok);
+        if(res.ok){ if(!goodSince)goodSince=ts; if(ts-goodSince>=900){ cap.textContent="Capturing…"; running=false; if(raf)cancelAnimationFrame(raf); return setTimeout(grab,120); } cap.disabled=false; cap.textContent="Ready — hold still"; cap.onclick=grab; }
+        else { goodSince=0; if(!manual){ cap.disabled=true; cap.textContent="Hold the pose…"; } }
       }
+      if(performance.now()-started>MANUAL_AFTER) enableManual();
+      raf=requestAnimationFrame(loop);
     }
+    raf=requestAnimationFrame(loop);
+  }
 
-    $("#login").addEventListener("click", () => { KEY = $("#key").value.trim(); enter(); });
-    $("#genHero").addEventListener("click", async () => {
-      const s = $("#heroStatus"); s.className = "status"; s.textContent = "Generating… this takes ~30s";
-      $("#genHero").disabled = true;
-      try { const r = await callAdmin({ action: "hero" }); s.className = "status ok"; s.textContent = "✓ Landing image updated. Refresh the home screen."; }
-      catch (e) { s.className = "status err"; s.textContent = e.message; }
-      $("#genHero").disabled = false;
-    });
+  function showDetails(){
+    if(camState){ try{camState();}catch(e){} camState=null; }
+    const box=$("#sec-upload");
+    const shots=SIDES.map((s,i)=>`<div class="sh">${SHOTS[i]?`<img src="${SHOTS[i]}">`:s.label}</div>`).join("");
+    box.innerHTML=`
+      <div class="card">
+        <h2>Name your product</h2>
+        <div class="shots">${shots}</div>
+        <button class="link" id="retake" style="margin:8px 0 4px;">↻ Retake photos</button>
+        <label>Dress name</label><input id="u_name" placeholder="e.g. Rose Linen Kurti">
+        <div><label>Category</label><select id="u_cat">${catOptions("")}</select></div>
+        <div class="row2">
+          <div><label>Cost price ₹</label><input id="u_cost" inputmode="numeric" placeholder="what you paid"></div>
+          <div><label>Sell price ₹</label><input id="u_price" inputmode="numeric" placeholder="shop price"></div>
+        </div>
+        <label>Quantity available</label><input id="u_qty" inputmode="numeric" placeholder="e.g. 10" value="1">
+        <button class="btn btn-pine" id="u_save">Save product</button>
+        <div class="status" id="u_msg"></div>
+      </div>`;
+    $("#retake").onclick=()=>loadUpload();
+    $("#u_save").onclick=async()=>{ const m=$("#u_msg"); m.className="status";
+      const name=$("#u_name").value.trim(); if(!name){ m.className="status err"; m.textContent="Please enter a name."; return; }
+      const imgs=SHOTS.filter(Boolean); m.textContent="Saving…"; $("#u_save").disabled=true;
+      try{
+        const r=await adminApi({action:"product-save", product:{ name, category:$("#u_cat").value,
+          price:$("#u_price").value, cost:$("#u_cost").value, stock:$("#u_qty").value }});
+        if(imgs.length){ m.textContent="Uploading photos…"; await adminApi({action:"product-images", product_id:r.id, images:imgs}); }
+        m.className="status ok"; m.textContent="✓ Product saved and live.";
+        setTimeout(()=>{ loadUpload(); loadProducts(); loadDashboard(); },900);
+      }catch(e){ m.className="status err"; m.textContent=e.message; $("#u_save").disabled=false; }
+    };
+  }
 
-    if (KEY) { $("#key").value = KEY; }
+  /* Staff (owner) */
+  async function loadStaff(){
+    const box=$("#sec-staff");
+    box.innerHTML=`<div class="card"><h2>Add staff account</h2>
+      <label>Username</label><input id="st_user">
+      <label>Password (6+)</label><input id="st_pass" type="password">
+      <label>Phone</label><input id="st_phone" inputmode="numeric" placeholder="+91…">
+      <button class="btn btn-pine" id="st_go">Create staff</button>
+      <div class="status" id="st_msg"></div>
+    </div><div class="card"><h2>Team</h2><div id="st_list" class="muted">Loading…</div></div>`;
+    $("#st_go").onclick=async()=>{ const m=$("#st_msg"); m.className="status"; m.textContent="Creating…";
+      try{ const r=await adminApi({action:"staff-create", username:$("#st_user").value, password:$("#st_pass").value, phone:$("#st_phone").value});
+        m.className="status ok"; m.innerHTML="✓ Staff created. Their recovery code (share privately):";
+        $("#sec-staff").querySelector(".card").appendChild(el(`<div class="codebox">${r.recovery_code}</div>`));
+        $("#st_user").value=""; $("#st_pass").value=""; $("#st_phone").value=""; renderStaffList(); }
+      catch(e){ m.className="status err"; m.textContent=e.message; } };
+    renderStaffList();
+  }
+  async function renderStaffList(){
+    const wrap=$("#st_list");
+    try{ const {staff}=await adminApi({action:"staff-list"});
+      wrap.innerHTML=staff.map(s=>`<div class="prow" style="padding:8px 0;border-bottom:1px solid var(--line)">
+        <div style="flex:1"><div class="pname">${s.username} <span class="muted">· ${s.role}</span></div><div class="pmeta">${s.phone||"no phone"} · ${s.active?"active":"disabled"}</div></div>
+        ${s.role!=="owner"?`<button class="btn btn-ghost small" data-id="${s.id}" data-act="${s.active?0:1}">${s.active?"Disable":"Enable"}</button>`:""}
+      </div>`).join("");
+      wrap.querySelectorAll("button[data-id]").forEach(b=>b.onclick=async()=>{ try{ await adminApi({action:"staff-set-active", id:b.dataset.id, active:+b.dataset.act}); renderStaffList(); }catch(e){alert(e.message);} });
+    }catch(e){ wrap.innerHTML=`<div class="status err">${e.message}</div>`; }
+  }
+
+  /* Settings */
+  function loadSettings(){
+    const box=$("#sec-settings");
+    box.innerHTML=`<div class="card"><h2>Change password</h2>
+      <label>Current password</label><input id="cp_old" type="password">
+      <label>New password (6+)</label><input id="cp_new" type="password">
+      <button class="btn btn-pine" id="cp_go">Update password</button>
+      <div class="status" id="cp_msg"></div>
+    </div>
+    <div class="card"><h2>Landing image</h2>
+      <div class="muted">Generate an original AI Kurseong scene for the home background (~30s).</div>
+      <button class="btn btn-gold" id="hero_go">Generate landing image</button>
+      <div class="status" id="hero_msg"></div>
+    </div>`;
+    $("#cp_go").onclick=async()=>{ const m=$("#cp_msg"); m.className="status"; m.textContent="Updating…";
+      try{ await authApi({action:"change-password", old_password:$("#cp_old").value, new_password:$("#cp_new").value});
+        m.className="status ok"; m.textContent="✓ Password updated."; $("#cp_old").value=""; $("#cp_new").value=""; }
+      catch(e){ m.className="status err"; m.textContent=e.message; } };
+    $("#hero_go").onclick=async()=>{ const m=$("#hero_msg"); m.className="status"; m.textContent="Generating… ~30s"; $("#hero_go").disabled=true;
+      try{ await adminApi({action:"hero"}); m.className="status ok"; m.textContent="✓ Landing image updated. Refresh the shop home."; }
+      catch(e){ m.className="status err"; m.textContent=e.message; } $("#hero_go").disabled=false; };
+  }
+
+  function splitList(s){ return String(s||"").split(",").map(x=>x.trim()).filter(Boolean); }
+  function escHtml(s){ return String(s??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+  function escAttr(s){ return String(s??"").replace(/"/g,"&quot;"); }
+
+  /* Resume session if token exists */
+  (async()=>{ if(!TOKEN){ showAuth("loginView"); return; }
+    try{ const r=await authApi({action:"me"}); ME=r.admin; enterApp(); }
+    catch(e){ TOKEN=""; localStorage.removeItem("ramree_token"); showAuth("loginView"); } })();
   </script>
 </body>
 </html>

@@ -162,3 +162,29 @@ User feedback: (1) 360 arrows don't work + AI angles look wrong → wants to upl
 
 ### Reality note to convey
 - AI angle 360 will always look imperfect (independent generations, not a true turntable). The real 360 comes from **uploading multiple real photos per product at /admin** — that's now the recommended path; AI angles remain only a fallback for products with a single photo.
+
+---
+
+## Session 6 — 2026-07-10 · Admin owner console: Dashboard, Analytics, guided camera Upload
+
+Goal: an owner-only admin, reached from a button on the shop, with three easy pages — (1) money + stock dashboard, (2) buying analytics, (3) super-simple guided-camera product upload. Built on the multi-admin auth foundation already in the working tree (`functions/api/_auth.js`, `admin-auth.js`, and `admin.js` `accounts`/`staff-*` actions: PBKDF2 passwords, D1 `admins`+`admin_sessions`, owner/staff roles, recovery codes).
+
+### Shop entry (button)
+- `catalog.js`: added a discreet shield **`.admin-fab`** (top-right of the home scene) linking to `/admin.html`, where the existing username/password gate takes over. Styled in `styles.css` (frosted circle, anchors to `.stage`).
+
+### Backend — two new `functions/api/admin.js` actions (token-auth, same as the rest)
+- **`dashboard`**: one `products LEFT JOIN orders GROUP BY product` query →
+  - Totals: **Total Invest** = Σ cost×(stock+sold), **Total Earning** = Σ order revenue, Profit = earning − COGS(sold), plus stock value / units in stock.
+  - Per category (sorted by sales) → per product: purchased (=stock+sold, since orders decrement stock), in stock, sold, cost (invested), sale (revenue), profit.
+- **`analytics`** (default 30-day window): per-product sold-in-window → units/day rate & days-of-cover. Classifies **fast / slow / idle** movers; **What to buy** = movers with <10 days cover, recommend_qty to reach ~30-day cover (+ est restock cost); **Low stock** alerts (≤5 left); **Most sold** all-time. SQL validated against a scratch SQLite build of `schema.sql`.
+
+### Frontend — `public/admin.html` restructured
+- Tabs are now **Dashboard · Analytics · Upload · Products · Staff · Settings** (old "Add product" + "Accounts" tabs folded in / replaced).
+- **Dashboard**: two big Invest/Earning KPI cards + profit/stock; category cards that **expand on tap** to show each product's 6-stat grid.
+- **Analytics**: "What to buy" and "Low stock" alert cards, then Fast/Slow/Idle mover lists and all-time Most sold.
+- **Upload (super simple)**: big "Open camera" → **guided 4-side capture** (Front/Right/Back/Left) mirroring the shop try-on. Front shot auto-captures on a held full-body MoveNet pose (CDN UMD, lazy-loaded); side/back fall back to a fast manual "Capture now" (pose can't lock when facing away). Each frame is **beautified + downscaled client-side** (canvas `brightness/contrast/saturate` + ≤1080px JPEG q0.82) to keep the site light and uploads fast. Then a 4-field form — Name, Cost price, Sell price, Quantity (+ category) — creates the product (`product-save`) and sets its photos (`product-images`). Gallery-pick fallback included; camera stops on cancel/tab-switch.
+
+### Verified
+- `node --check` on `admin.js`, `src/index.js`, `catalog.js`, and the extracted `admin.html` script — all clean.
+- Dashboard + analytics SQL executed against an in-memory SQLite from `schema.sql` with sample products/orders → correct sold/revenue/window aggregates and reorder maths (out-of-stock fast mover → recommend restock; low-stock + idle correctly separated).
+- Not yet run on-device: live camera capture + a real end-to-end upload (needs a phone + deployed Worker with D1/KV).
