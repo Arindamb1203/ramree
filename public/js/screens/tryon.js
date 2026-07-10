@@ -8,6 +8,23 @@ import { whatsappBlock } from "../wa.js";
 // In-memory capture only. Cleared after use.
 let capturedDataUrl = null;
 
+/* Downscale a picked file to a JPEG data URL (kept only in memory, like a capture). */
+function fileToDataUrl(file, max = 1080, q = 0.9) {
+  return new Promise((resolve, reject) => {
+    const img = new Image(); const u = URL.createObjectURL(file);
+    img.onload = () => {
+      let { width: w, height: h } = img;
+      if (w > h && w > max) { h = Math.round(h * max / w); w = max; }
+      else if (h >= w && h > max) { w = Math.round(w * max / h); h = max; }
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(u); resolve(c.toDataURL("image/jpeg", q));
+    };
+    img.onerror = () => { URL.revokeObjectURL(u); reject(new Error("Bad image")); };
+    img.src = u;
+  });
+}
+
 /* Which framing a garment needs. Upper garments (t-shirts, tops) only need the
    head + torso; kurti sets and anything full-length need the whole body. */
 function framingScope(product) {
@@ -38,6 +55,8 @@ export async function renderCamera(view) {
 
     <div class="cam-actions">
       <button class="btn btn-rose" id="capture" disabled>Hold your pose…</button>
+      <button class="btn btn-ghost" id="uploadBtn">Upload a photo instead</button>
+      <input type="file" id="uploadInput" accept="image/*" hidden>
       <div class="hint">Your photo is processed to create the look and then discarded — it is never stored.</div>
     </div>
   `;
@@ -46,6 +65,22 @@ export async function renderCamera(view) {
   const guide = view.querySelector("#guide");
   const fb = view.querySelector("#fb");
   const captureBtn = view.querySelector("#capture");
+  const uploadBtn = view.querySelector("#uploadBtn");
+  const uploadInput = view.querySelector("#uploadInput");
+
+  // Upload-from-gallery: skip the live camera entirely with an existing photo.
+  uploadBtn.addEventListener("click", () => uploadInput.click());
+  uploadInput.addEventListener("change", async () => {
+    const file = uploadInput.files && uploadInput.files[0];
+    if (!file) return;
+    try {
+      capturedDataUrl = await fileToDataUrl(file);
+      cleanup();
+      go("tryonResult", {}, { title: "Your look" });
+    } catch (e) {
+      toast("Couldn't read that image — try another");
+    }
+  });
 
   let stream = null;
   let raf = null;

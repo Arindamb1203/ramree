@@ -105,7 +105,14 @@ export async function onRequest(context) {
       const exists = await env.DB.prepare("SELECT id FROM products WHERE id = ?").bind(id).first();
       if (!exists) return json({ error: "Product not found" }, 404);
       const urls = [];
-      for (let i = 0; i < images.length; i++) urls.push(await putImage(env, `photo/${id}/${Date.now()}-${i + 1}`, images[i]));
+      for (let i = 0; i < images.length; i++) {
+        const img = String(images[i] || "");
+        // New capture/upload → data: URL we store in KV. Reused existing photo →
+        // already a /media or http URL; reference it directly (no duplicate storage).
+        if (img.startsWith("data:")) urls.push(await putImage(env, `photo/${id}/${Date.now()}-${i + 1}`, img));
+        else if (img.startsWith("/") || img.startsWith("http")) urls.push(img);
+      }
+      if (!urls.length) return json({ error: "No usable images" }, 400);
       await env.DB.prepare("UPDATE products SET images = ? WHERE id = ?").bind(JSON.stringify(urls), id).run();
       return json({ ok: true, images: urls });
     }

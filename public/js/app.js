@@ -39,30 +39,44 @@ const screens = {
   tryonResult: tryon.renderResult,
 };
 
-/* ── Navigation stack ── */
+/* ── Navigation stack ──
+   Mirrored into the browser history so the phone's Back button (and swipe-back)
+   does exactly what the in-app Back arrow does: one popstate = one screen back. */
 const stack = [];   // [{ name, params, title, root }]
 
 export function go(name, params = {}, opts = {}) {
   stack.push({ name, params, title: opts.title || "Ramree", root: !!opts.root });
+  history.pushState({ depth: stack.length }, "");
   render();
 }
 
 export function replace(name, params = {}, opts = {}) {
   if (stack.length) stack.pop();
-  go(name, params, opts);
+  stack.push({ name, params, title: opts.title || "Ramree", root: !!opts.root });
+  history.replaceState({ depth: stack.length }, "");
+  render();
 }
 
+/* Both the site Back arrow and the OS Back button funnel through the browser
+   history; the actual stack pop + render happens in the popstate handler. */
 export function back() {
   if (stack.length <= 1) return;
-  stack.pop();
-  render();
+  history.back();
 }
 
-/* Pop back to a named screen (or root if not found) */
+/* Pop back to a named screen (or root if not found). */
 export function backTo(name) {
-  while (stack.length > 1 && stack[stack.length - 1].name !== name) stack.pop();
-  render();
+  let n = 0;
+  for (let i = stack.length - 1; i > 0 && stack[i].name !== name; i--) n++;
+  if (n > 0) history.go(-n);   // one popstate fires for the final entry
+  else render();
 }
+
+window.addEventListener("popstate", () => {
+  const targetDepth = (history.state && history.state.depth) || 1;
+  while (stack.length > targetDepth) stack.pop();
+  render();
+});
 
 async function render() {
   const cur = stack[stack.length - 1];
@@ -122,4 +136,8 @@ document.addEventListener("contextmenu", (e) => {
   if (e.target.closest(".result-wrap")) e.preventDefault();
 });
 
-go("catalog", {}, { title: "Ramree", root: true });
+// Seed the first screen as the root history entry (replaceState, no extra entry
+// to "back" through) so OS-back from the home screen exits cleanly.
+stack.push({ name: "catalog", params: {}, title: "Ramree", root: true });
+history.replaceState({ depth: 1 }, "");
+render();

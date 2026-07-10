@@ -6,8 +6,9 @@ const ICON360 = `<svg viewBox="0 0 24 24" width="12" height="12"><path d="M12 8c
 
 export async function render(view) {
   view.innerHTML = `
-    <a class="admin-fab" href="/admin.html" aria-label="Admin" title="Admin">
-      <svg viewBox="0 0 24 24" width="17" height="17"><path d="M12 3l7 3v5c0 4.4-3 8.3-7 9.5C8 19.3 5 15.4 5 11V6l7-3z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9.5 12l1.8 1.8L15 10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <a class="admin-btn" href="/admin.html" aria-label="Admin">
+      <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 3l7 3v5c0 4.4-3 8.3-7 9.5C8 19.3 5 15.4 5 11V6l7-3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.5 12l1.8 1.8L15 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Admin</span>
     </a>
     <div class="scene">
       <img class="scene-photo" alt="" src="/media/hero/1"

@@ -406,15 +406,45 @@
           <span class="t">Open camera</span>
           <span class="d">Guided 4-side capture</span>
         </button>
-        <div style="text-align:center;margin-top:12px;">
-          <button class="link" id="up_gallery">or pick photos from gallery</button>
+        <div style="display:flex;gap:16px;justify-content:center;margin-top:12px;flex-wrap:wrap;">
+          <button class="link" id="up_gallery">Upload from gallery</button>
+          <button class="link" id="up_existing">Use existing photos</button>
           <input type="file" id="up_files" accept="image/*" multiple hidden>
         </div>
       </div>`;
     $("#up_start").onclick=()=>startCapture(0);
     $("#up_gallery").onclick=()=>$("#up_files").click();
+    $("#up_existing").onclick=pickExisting;
     $("#up_files").onchange=async()=>{ const files=[...$("#up_files").files].slice(0,4); if(!files.length)return;
       SHOTS=[]; for(const f of files){ try{ SHOTS.push(await beautifyFile(f)); }catch(e){} } showDetails(); };
+  }
+
+  /* Reuse a previous product's photo set for a new dress (no re-shoot). */
+  async function pickExisting(){
+    const box=$("#sec-upload"); box.innerHTML=`<div class="card"><h2>Use existing photos</h2><div class="muted">Loading…</div></div>`;
+    try{
+      const {products}=await adminApi({action:"list"});
+      const withPics=(products||[]).filter(p=>p.images&&p.images.length);
+      const box2=$("#sec-upload");
+      box2.innerHTML=`<div class="card">
+        <h2>Use existing photos</h2>
+        <div class="seclead">Pick a photo set to reuse. Best when the model, pose and background match — if it doesn’t fit the new dress, shoot or upload fresh instead.</div>
+        <div id="exlist"></div>
+        <button class="link" id="ex_back" style="margin-top:10px;">← Back</button>
+      </div>`;
+      $("#ex_back").onclick=()=>loadUpload();
+      const list=$("#exlist");
+      if(!withPics.length){ list.innerHTML=`<div class="muted">No products with photos yet.</div>`; return; }
+      withPics.forEach(p=>{
+        const row=el(`<div class="prow" style="padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;">
+          <img class="thumb" src="${p.images[0]}">
+          <div style="flex:1"><div class="pname">${escHtml(p.name)}</div><div class="pmeta">${p.images.length} photo(s)</div></div>
+          <span class="btn btn-ghost small">Use</span>
+        </div>`);
+        row.onclick=()=>{ SHOTS=p.images.slice(0,4); showDetails(); };
+        list.appendChild(row);
+      });
+    }catch(e){ $("#sec-upload").innerHTML=`<div class="card"><div class="status err">${e.message}</div><button class="link" id="ex_back2">← Back</button></div>`; $("#ex_back2").onclick=()=>loadUpload(); }
   }
 
   /* Beautify: light auto-enhance + downscale (keeps the site fast/light). */
@@ -479,7 +509,11 @@
           <div class="cam-fb" id="fb">Starting camera…</div>
         </div>
         <button class="btn btn-pine" id="cap" disabled>Hold the pose…</button>
-        <button class="link" id="cancelCap" style="display:block;margin:8px auto 0;">Cancel</button>
+        <div style="display:flex;gap:14px;justify-content:center;margin-top:10px;">
+          <button class="link" id="uploadShot">Upload this side</button>
+          <button class="link" id="cancelCap">Cancel</button>
+        </div>
+        <input type="file" id="shotFile" accept="image/*" hidden>
       </div>`;
     const v=$("#v"), fb=$("#fb"), frame=$("#frame"), cap=$("#cap");
     let stream=null, raf=null, running=true, last=0, goodSince=0, manual=false;
@@ -490,6 +524,11 @@
     function cleanup(){ running=false; if(raf)cancelAnimationFrame(raf); if(stream)stream.getTracks().forEach(t=>t.stop()); }
     camState=cleanup;
     $("#cancelCap").onclick=()=>{ cleanup(); loadUpload(); };
+    // Upload this side from local storage instead of shooting it.
+    $("#uploadShot").onclick=()=>$("#shotFile").click();
+    $("#shotFile").onchange=async()=>{ const f=$("#shotFile").files&&$("#shotFile").files[0]; if(!f)return;
+      try{ cleanup(); SHOTS[idx]=await beautifyFile(f); if(idx+1<SIDES.length) startCapture(idx+1); else showDetails(); }
+      catch(e){ /* ignore bad file */ } };
 
     function grab(){
       cleanup();
