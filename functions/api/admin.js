@@ -1,11 +1,11 @@
 /* POST /api/admin  { action, ... }  — token-authenticated (Bearer or body.token)
    Actions:
      list | product-get | product-save | product-delete | product-images
-     hero | accounts | dashboard | analytics
+     hero | compose | accounts | dashboard | analytics
      staff-create | staff-list | staff-set-active
 */
 import { json, preflight, ensureTables, parseImages } from "./_utils.js";
-import { getModel, imageGenerate, dataUrlToBytes } from "./_openai.js";
+import { getModel, getQuality, imageGenerate, imageEdit, dataUrlToBytes, dataUrlToBlob, urlToBlob } from "./_openai.js";
 import { ensureAuthTables, getAdminByToken, tokenFromRequest, hashPassword, recoveryCode, sha256hex } from "./_auth.js";
 
 const HERO_PROMPT = "A serene, premium travel photograph of Kurseong hill town in the Darjeeling Himalayas at misty dawn: layered emerald tea gardens on rolling ridges, pine forests, low drifting clouds, distant snow-capped Kanchenjunga glowing with soft golden sunrise light, muted sage-green and warm gold tones, tranquil and luxurious, no people, no text, no watermark";
@@ -151,6 +151,31 @@ export async function onRequest(context) {
         by_product: Object.values(byProduct).sort((a, b) => b.revenue - a.revenue),
         recent: rows.slice(0, 20),
       });
+    }
+
+    /* ── Compose: put a NEW dress onto an EXISTING model photo (AI) ──
+       Used by admin "Use existing photos": reuse the model/pose/background,
+       swap in a freshly shot/uploaded garment. One person image per call so the
+       client can show per-side progress and survive a single failure. */
+    if (body.action === "compose") {
+      if (!env.OPENAI_API_KEY) return json({ error: "OPENAI_API_KEY not set" }, 500);
+      const personUrl = String(body.person_image || "");
+      const garment = String(body.garment || "");
+      if (!personUrl || !garment) return json({ error: "person_image and garment are required" }, 400);
+      const personBlob = personUrl.startsWith("data:") ? dataUrlToBlob(personUrl) : await urlToBlob(personUrl);
+      const garmentBlob = dataUrlToBlob(garment);
+      const prompt =
+        `Replace the outfit worn by the person in the FIRST image with the garment ` +
+        `shown in the SECOND image, so they are naturally wearing the new garment. ` +
+        `Preserve the person's face, hair, skin, body, pose and the background exactly. ` +
+        `Faithfully match the new garment's fabric, colour, print, neckline and cut. ` +
+        `Realistic fit, natural folds, correct proportions, photorealistic catalogue-quality result.`;
+      const imgs = await imageEdit({
+        apiKey: env.OPENAI_API_KEY, model: getModel(env), quality: getQuality(env), n: 1, size: "1024x1536",
+        prompt, images: [{ blob: personBlob, name: "person.jpg" }, { blob: garmentBlob, name: "garment.png" }],
+      });
+      if (!imgs[0]) return json({ error: "AI could not compose this side" }, 502);
+      return json({ ok: true, image: imgs[0] });
     }
 
     /* ── Dashboard (invest / earning + category→product stats) ── */

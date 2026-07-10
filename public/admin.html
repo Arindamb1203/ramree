@@ -419,32 +419,89 @@
       SHOTS=[]; for(const f of files){ try{ SHOTS.push(await beautifyFile(f)); }catch(e){} } showDetails(); };
   }
 
-  /* Reuse a previous product's photo set for a new dress (no re-shoot). */
+  /* ── Use existing MODEL photos + a NEW dress → AI swaps the dress in ── */
+  let PERSON_SET = [];   // chosen model photo URLs (reused), 1..4 sides
+
   async function pickExisting(){
-    const box=$("#sec-upload"); box.innerHTML=`<div class="card"><h2>Use existing photos</h2><div class="muted">Loading…</div></div>`;
+    const box=$("#sec-upload"); box.innerHTML=`<div class="card"><h2>Use existing model photos</h2><div class="muted">Loading…</div></div>`;
     try{
       const {products}=await adminApi({action:"list"});
       const withPics=(products||[]).filter(p=>p.images&&p.images.length);
-      const box2=$("#sec-upload");
-      box2.innerHTML=`<div class="card">
-        <h2>Use existing photos</h2>
-        <div class="seclead">Pick a photo set to reuse. Best when the model, pose and background match — if it doesn’t fit the new dress, shoot or upload fresh instead.</div>
+      box.innerHTML=`<div class="card">
+        <h2>Pick the model photos to reuse</h2>
+        <div class="seclead">We’ll keep this model, pose and background, and put the <b>new dress</b> on them with AI. Pick a set whose pose/framing suits the new dress.</div>
         <div id="exlist"></div>
         <button class="link" id="ex_back" style="margin-top:10px;">← Back</button>
       </div>`;
       $("#ex_back").onclick=()=>loadUpload();
       const list=$("#exlist");
-      if(!withPics.length){ list.innerHTML=`<div class="muted">No products with photos yet.</div>`; return; }
+      if(!withPics.length){ list.innerHTML=`<div class="muted">No products with photos yet — shoot your first one with the camera.</div>`; return; }
       withPics.forEach(p=>{
         const row=el(`<div class="prow" style="padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;">
           <img class="thumb" src="${p.images[0]}">
-          <div style="flex:1"><div class="pname">${escHtml(p.name)}</div><div class="pmeta">${p.images.length} photo(s)</div></div>
+          <div style="flex:1"><div class="pname">${escHtml(p.name)}</div><div class="pmeta">${p.images.length} side(s)</div></div>
           <span class="btn btn-ghost small">Use</span>
         </div>`);
-        row.onclick=()=>{ SHOTS=p.images.slice(0,4); showDetails(); };
+        row.onclick=()=>{ PERSON_SET=p.images.slice(0,4); askGarment(); };
         list.appendChild(row);
       });
     }catch(e){ $("#sec-upload").innerHTML=`<div class="card"><div class="status err">${e.message}</div><button class="link" id="ex_back2">← Back</button></div>`; $("#ex_back2").onclick=()=>loadUpload(); }
+  }
+
+  function askGarment(){
+    let garment=null;
+    const box=$("#sec-upload");
+    box.innerHTML=`<div class="card">
+      <h2>Photo of the new dress</h2>
+      <div class="seclead">Lay the dress flat or on a hanger in good light. AI will put it on the ${PERSON_SET.length} chosen model shot(s).</div>
+      <div class="shots"><div class="sh" id="gprev" style="flex:0 0 46%;">No photo yet</div></div>
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <button class="btn btn-pine" id="g_shoot" style="margin-top:0;">📷 Take photo</button>
+        <button class="btn btn-ghost" id="g_upload" style="margin-top:0;">Upload</button>
+      </div>
+      <input type="file" id="g_shootF" accept="image/*" capture="environment" hidden>
+      <input type="file" id="g_uploadF" accept="image/*" hidden>
+      <button class="btn btn-gold" id="g_go" disabled>Generate the ${PERSON_SET.length} photo(s)</button>
+      <div class="status" id="g_msg"></div>
+      <button class="link" id="g_back" style="display:block;margin:10px auto 0;">← Back</button>
+    </div>`;
+    const setGarment=async(file)=>{ try{ garment=await beautifyFile(file); $("#gprev").innerHTML=`<img src="${garment}">`; $("#g_go").disabled=false; }catch(e){} };
+    $("#g_shoot").onclick=()=>$("#g_shootF").click();
+    $("#g_upload").onclick=()=>$("#g_uploadF").click();
+    $("#g_shootF").onchange=()=>{ const f=$("#g_shootF").files[0]; if(f)setGarment(f); };
+    $("#g_uploadF").onchange=()=>{ const f=$("#g_uploadF").files[0]; if(f)setGarment(f); };
+    $("#g_back").onclick=()=>pickExisting();
+    $("#g_go").onclick=()=>{ if(garment) composeSet(garment); };
+  }
+
+  async function composeSet(garment){
+    const box=$("#sec-upload"); const n=PERSON_SET.length;
+    let done=0;
+    const bar=()=>`<div class="card" style="text-align:center;">
+      <h2>Styling the new dress…</h2>
+      <div class="seclead">AI is placing the dress on each side. This takes about a minute — please wait.</div>
+      <div class="steps">${PERSON_SET.map((_,i)=>`<div class="dot ${i<done?'done':'on'}"></div>`).join("")}</div>
+      <div class="muted" id="cmsg">${done} of ${n} done</div></div>`;
+    box.innerHTML=bar();
+    // Run all sides in parallel; keep whatever succeeds, downscale to stay light.
+    const results=await Promise.allSettled(PERSON_SET.map(async(url)=>{
+      const r=await adminApi({action:"compose", person_image:url, garment});
+      done++; const m=$("#cmsg"); if(m) m.textContent=`${done} of ${n} done`;
+      const b=$("#sec-upload").querySelector(".steps"); if(b) b.innerHTML=PERSON_SET.map((_,i)=>`<div class="dot ${i<done?'done':'on'}"></div>`).join("");
+      return await downscaleDataUrl(r.image);
+    }));
+    SHOTS=results.filter(x=>x.status==="fulfilled").map(x=>x.value);
+    if(!SHOTS.length){ box.innerHTML=`<div class="card"><div class="status err">AI couldn’t generate the photos. Try a clearer dress photo, or shoot the model fresh.</div>
+      <button class="btn btn-ghost" id="c_retry">Try again</button><button class="link" id="c_back" style="display:block;margin:8px auto 0;">Start over</button></div>`;
+      $("#c_retry").onclick=()=>askGarment(); $("#c_back").onclick=()=>loadUpload(); return; }
+    showDetails();
+  }
+
+  // Downscale an AI PNG data URL → ~1080px JPEG (keeps the shop light & fast).
+  function downscaleDataUrl(dataUrl){
+    return new Promise((res)=>{ const img=new Image();
+      img.onload=()=>res(enhanceCanvasToDataUrl(img,img.width,img.height));
+      img.onerror=()=>res(dataUrl); img.src=dataUrl; });
   }
 
   /* Beautify: light auto-enhance + downscale (keeps the site fast/light). */
