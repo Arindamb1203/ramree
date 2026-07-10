@@ -18,8 +18,8 @@ export async function render(view, { action }) {
     <div class="field">
       <label for="wa">WhatsApp number</label>
       <div class="phone-row">
-        <input class="input cc" id="cc" type="text" inputmode="numeric" value="+91" aria-label="Country code">
-        <input class="input" id="wa" type="tel" inputmode="numeric" autocomplete="tel" placeholder="10-digit number" value="${escapeHtml((pre.local || ""))}">
+        <input class="input cc" id="cc" type="text" inputmode="numeric" value="+91" maxlength="4" aria-label="Country code">
+        <input class="input" id="wa" type="tel" inputmode="numeric" autocomplete="tel" placeholder="10-digit number" maxlength="10" value="${escapeHtml((pre.local || ""))}">
       </div>
       <div class="hint">Standard privacy applies. You can opt out of messages anytime on the next screen.</div>
     </div>
@@ -33,6 +33,21 @@ export async function render(view, { action }) {
   const cc = view.querySelector("#cc");
   const wa = view.querySelector("#wa");
   const btn = view.querySelector("#go");
+
+  // Number field: local digits only. Auto-strip a pasted/typed country code
+  // (+91 / 91) or trunk 0 so only the 10-digit local number remains.
+  wa.addEventListener("input", () => {
+    let v = wa.value.replace(/\D/g, "");
+    if (v.length > 10) {
+      if (v.startsWith("91")) v = v.slice(2);
+      else if (v.startsWith("0")) v = v.replace(/^0+/, "");
+    }
+    wa.value = v.slice(0, 10);
+  });
+  // Country code box: keep it a leading "+" followed by up to 3 digits.
+  cc.addEventListener("input", () => {
+    cc.value = "+" + cc.value.replace(/\D/g, "").slice(0, 3);
+  });
 
   btn.addEventListener("click", async () => {
     const name = nm.value.trim();
