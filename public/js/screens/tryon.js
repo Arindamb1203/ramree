@@ -8,16 +8,31 @@ import { whatsappBlock } from "../wa.js";
 // In-memory capture only. Cleared after use.
 let capturedDataUrl = null;
 
+/* Which framing a garment needs. Upper garments (t-shirts, tops) only need the
+   head + torso; kurti sets and anything full-length need the whole body. */
+function framingScope(product) {
+  const cat = (product && product.category ? product.category : "").toLowerCase();
+  if (/tshirt|t-shirt|top|shirt|blouse/.test(cat)) return "upper";
+  return "full";
+}
+
 /* ── Camera + pose guide ─────────────────────────────── */
 export async function renderCamera(view) {
+  const scope = framingScope(state.product);
+  const upper = scope === "upper";
+  const heading = upper ? "Frame your upper body" : "Stand in frame";
+  const lead = upper
+    ? "Head and shoulders centred and upright, in good light. We'll capture automatically when you're set."
+    : "Full body, centered and upright, in good light. We'll capture automatically when you're set.";
+
   view.innerHTML = `
     <div class="eyebrow">Try It On</div>
-    <h1 class="display" style="font-size:28px;">Stand in frame</h1>
-    <div class="lead" style="margin-bottom:14px;">Full body, centered and upright, in good light. We'll capture automatically when you're set.</div>
+    <h1 class="display" style="font-size:28px;">${heading}</h1>
+    <div class="lead" style="margin-bottom:14px;">${lead}</div>
 
     <div class="cam-wrap" id="camWrap">
       <video id="video" playsinline muted autoplay></video>
-      <div class="pose-guide" id="guide"><div class="frame"></div></div>
+      <div class="pose-guide${upper ? " upper" : ""}" id="guide"><div class="frame"></div></div>
       <div class="cam-feedback" id="fb">Starting camera…</div>
     </div>
 
@@ -37,8 +52,20 @@ export async function renderCamera(view) {
   let running = true;
   let lastRun = 0;
   let goodSince = 0;
+  const startedAt = performance.now();
+  const MANUAL_AFTER = 7000; // ms: if no auto-lock, let the user capture manually
+  let manualEnabled = false;
   const sampler = document.createElement("canvas");
   const sctx = sampler.getContext("2d", { willReadFrequently: true });
+
+  // Never leave the customer stuck: after a while, offer a manual capture.
+  function enableManual() {
+    if (manualEnabled) return;
+    manualEnabled = true;
+    captureBtn.disabled = false;
+    captureBtn.textContent = "Capture now";
+    captureBtn.onclick = () => { running = false; if (raf) cancelAnimationFrame(raf); doCapture(video, cleanup); };
+  }
 
   function cleanup() {
     running = false;
@@ -48,19 +75,36 @@ export async function renderCamera(view) {
   }
   onLeave(cleanup);
 
-  // 1) Camera
+  // 1) Camera — prefer the REAR camera (someone photographs you at a proper
+  //    distance); fall back to the front camera if there's no rear one.
+  const dims = { width: { ideal: 720 }, height: { ideal: 960 } };
+  let usingFront = false;
   try {
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 960 } },
+      video: { facingMode: { ideal: "environment" }, ...dims },
       audio: false,
     });
-    video.srcObject = stream;
-    await video.play().catch(() => {});
   } catch (err) {
-    fb.textContent = "Camera unavailable";
-    toast("Please allow camera access to try on");
-    return;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", ...dims }, audio: false });
+      usingFront = true;
+    } catch (err2) {
+      fb.textContent = "Camera unavailable";
+      toast("Please allow camera access to try on");
+      return;
+    }
   }
+  // Detect which camera we actually got (facingMode isn't guaranteed by "ideal").
+  try {
+    const fm = stream.getVideoTracks()[0]?.getSettings?.().facingMode;
+    if (fm === "user") usingFront = true;
+    else if (fm === "environment") usingFront = false;
+  } catch (e) {}
+  // Mirror the preview ONLY for the front camera (a selfie feels natural mirrored;
+  // a rear shot must not be flipped). Capture always uses the true, unmirrored frame.
+  video.style.transform = usingFront ? "scaleX(-1)" : "none";
+  video.srcObject = stream;
+  await video.play().catch(() => {});
 
   // 2) Pose engine
   fb.textContent = "Loading pose guide…";
@@ -84,7 +128,7 @@ export async function renderCamera(view) {
       let res;
       try {
         const kp = await estimate(video);
-        res = analyze(kp, video.videoWidth, video.videoHeight);
+        res = analyze(kp, video.videoWidth, video.videoHeight, scope);
         // lighting check
         if (res.ok && isTooDark(video, sampler, sctx)) {
           res = { ok: false, message: "Find brighter light" };
@@ -119,8 +163,13 @@ export async function renderCamera(view) {
       }
     } else {
       goodSince = 0;
-      captureBtn.disabled = true;
-      captureBtn.textContent = "Hold your pose…";
+      if (performance.now() - startedAt > MANUAL_AFTER) {
+        enableManual();
+        fb.textContent = res.message + " · or tap Capture now";
+      } else {
+        captureBtn.disabled = true;
+        captureBtn.textContent = "Hold your pose…";
+      }
     }
   }
 

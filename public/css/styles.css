@@ -437,9 +437,10 @@ body::before {
 /* ── Try-on camera ───────────────────────────────────── */
 .cam-wrap { position: relative; width: 100%; aspect-ratio: 3/4; border-radius: var(--radius); overflow: hidden; background: #10130f; box-shadow: var(--shadow); }
 .cam-wrap video, .cam-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.cam-wrap video { transform: scaleX(-1); }
+/* Mirroring is applied inline per-camera in tryon.js (front = mirrored, rear = not). */
 .pose-guide { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
-.pose-guide .frame { position: absolute; left: 12%; right: 12%; top: 6%; bottom: 6%; border: 2px dashed rgba(255,255,255,.6); border-radius: 120px/60px; transition: border-color .25s ease; }
+.pose-guide .frame { position: absolute; left: 12%; right: 12%; top: 6%; bottom: 6%; border: 2px dashed rgba(255,255,255,.6); border-radius: 120px/60px; transition: border-color .25s ease, top .25s ease, bottom .25s ease; }
+.pose-guide.upper .frame { left: 16%; right: 16%; top: 5%; bottom: 32%; }
 .pose-guide.good .frame { border-color: #8effa6; border-style: solid; }
 .cam-feedback {
   position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 3;

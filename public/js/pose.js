@@ -48,17 +48,35 @@ export async function estimate(video) {
   return poses && poses[0] ? poses[0].keypoints : null;
 }
 
-export function analyze(keypoints, videoW, videoH) {
+/* scope: "upper" (t-shirts/tops — head + torso is enough) or "full" (kurti sets). */
+export function analyze(keypoints, videoW, videoH, scope = "full") {
   if (!keypoints) return { ok: false, message: "Looking for you…" };
   const get = (i) => keypoints[i];
   const vis = (i) => get(i) && get(i).score >= MIN_SCORE;
 
   if (!vis(KP.nose) && !vis(KP.lShoulder) && !vis(KP.rShoulder)) return { ok: false, message: "Step into the frame" };
   if (!vis(KP.lShoulder) || !vis(KP.rShoulder)) return { ok: false, message: "Face the camera, shoulders in view" };
+
+  const shoulderMid = mid(get(KP.lShoulder), get(KP.rShoulder));
+  const shoulderW = Math.abs(get(KP.lShoulder).x - get(KP.rShoulder).x) / videoW;
+
+  if (scope === "upper") {
+    // Upper garments: only need head + shoulders/chest, centred and upright.
+    const cx = shoulderMid.x / videoW;
+    if (cx < 0.32) return { ok: false, message: "Move to your right" };
+    if (cx > 0.68) return { ok: false, message: "Move to your left" };
+    if (shoulderW > 0.62) return { ok: false, message: "Move back a little" };
+    if (shoulderW < 0.20) return { ok: false, message: "Come a little closer" };
+    // Leave headroom above the head so the top isn't cropped at the neckline.
+    const headY = vis(KP.nose) ? get(KP.nose).y : shoulderMid.y;
+    if (headY < videoH * 0.06) return { ok: false, message: "Lower the camera a touch" };
+    return { ok: true, message: "Perfect — hold still" };
+  }
+
+  // Full-body scope (kurti sets etc.)
   if (!vis(KP.lHip) || !vis(KP.rHip)) return { ok: false, message: "Move back a little" };
   if (!vis(KP.lAnkle) && !vis(KP.rAnkle)) return { ok: false, message: "Move back so your feet are visible" };
 
-  const shoulderMid = mid(get(KP.lShoulder), get(KP.rShoulder));
   const hipMid = mid(get(KP.lHip), get(KP.rHip));
 
   const cx = hipMid.x / videoW;
