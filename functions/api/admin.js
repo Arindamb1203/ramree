@@ -18,6 +18,18 @@ async function putImage(env, key, dataUrl) {
 const jarr = (v) => JSON.stringify(Array.isArray(v) ? v : []);
 const slug = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 
+/* Demo figures — the shop is pre-launch, so the orders table is empty and the
+   owner console would show all zeros. Until a product has REAL sales, we show
+   stable, believable demo numbers derived from its id (deterministic, so they
+   don't jump around on refresh). Real orders override these automatically. */
+function hashId(s) { let h = 2166136261; s = String(s || ""); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function demoStats(id) {
+  const h = hashId(id);
+  const sold_all = h % 55;                                   // 0..54 lifetime units
+  const sold_win = Math.round(sold_all * (((h >>> 9) % 60) / 100)); // recent slice, 0..~60%
+  return { sold_all, sold_win };
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   if (request.method === "OPTIONS") return preflight();
@@ -151,12 +163,16 @@ export async function onRequest(context) {
       for (const c of (crows || [])) catName[c.slug] = c.name;
 
       const cats = {};
+      let demo = false;
       const totals = { invest: 0, earning: 0, cogs: 0, units_sold: 0, in_stock: 0, stock_value: 0 };
       for (const r of (prows || [])) {
-        const stock = r.stock || 0, sold = r.sold || 0, unitCost = r.cost || 0;
+        const stock = r.stock || 0, unitCost = r.cost || 0;
+        let sold = r.sold || 0, revenue = r.revenue || 0;
+        if (sold === 0 && revenue === 0) {              // no real sales yet → demo figures
+          sold = demoStats(r.id).sold_all; revenue = sold * (r.price || 0); demo = true;
+        }
         const purchased = stock + sold;                 // units ever acquired (orders decrement stock)
         const invested = unitCost * purchased;          // money put into this SKU
-        const revenue = r.revenue || 0;                 // actual sales revenue
         const cogs = unitCost * sold;                   // cost of what sold
         const prod = {
           id: r.id, name: r.name, price: r.price, unit_cost: unitCost,
@@ -172,7 +188,7 @@ export async function onRequest(context) {
         c.products.push(prod);
       }
       totals.profit = totals.earning - totals.cogs;
-      return json({ ok: true, totals, categories: Object.values(cats).sort((a, b) => b.sale - a.sale) });
+      return json({ ok: true, demo, totals, categories: Object.values(cats).sort((a, b) => b.sale - a.sale) });
     }
 
     /* ── Analytics (movement, reorder, low-stock) ── */
@@ -189,8 +205,11 @@ export async function onRequest(context) {
 
       const TARGET_COVER = 30;   // aim to hold ~30 days of stock
       const LOW_COVER = 10;      // reorder when under ~10 days of cover
+      let demo = false;
       const items = (prows || []).map((r) => {
-        const stock = r.stock || 0, soldWin = r.sold_win || 0, soldAll = r.sold_all || 0;
+        const stock = r.stock || 0;
+        let soldWin = r.sold_win || 0, soldAll = r.sold_all || 0;
+        if (soldAll === 0) { const d = demoStats(r.id); soldAll = d.sold_all; soldWin = d.sold_win; if (soldAll) demo = true; }
         const rate = soldWin / windowDays;               // units/day
         const daysCover = rate > 0 ? stock / rate : (stock > 0 ? Infinity : 0);
         return { id: r.id, name: r.name, category: r.category, price: r.price, cost: r.cost || 0, stock, sold_win: soldWin, sold_all: soldAll, rate, days_cover: daysCover };
@@ -224,7 +243,7 @@ export async function onRequest(context) {
       const most_sold = [...items].sort((a, b) => b.sold_all - a.sold_all).filter((i) => i.sold_all > 0).slice(0, 8);
 
       return json({
-        ok: true, window_days: windowDays,
+        ok: true, demo, window_days: windowDays,
         fast: fast.slice(0, 12), slow: slow.slice(0, 12), dead: dead.slice(0, 12),
         most_sold, reorder, low_stock,
         reorder_total_cost: reorder.reduce((s, r) => s + r.est_cost, 0),

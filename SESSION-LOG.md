@@ -188,3 +188,5 @@ Goal: an owner-only admin, reached from a button on the shop, with three easy pa
 - `node --check` on `admin.js`, `src/index.js`, `catalog.js`, and the extracted `admin.html` script — all clean.
 - Dashboard + analytics SQL executed against an in-memory SQLite from `schema.sql` with sample products/orders → correct sold/revenue/window aggregates and reorder maths (out-of-stock fast mover → recommend restock; low-stock + idle correctly separated).
 - Not yet run on-device: live camera capture + a real end-to-end upload (needs a phone + deployed Worker with D1/KV).
+
+**Follow-up (same session):** owner console is pre-launch, so `orders` is empty. Added deterministic **demo figures** in `admin.js` (`demoStats(id)` from an FNV hash of the product id) — purchased/sold/revenue/movement are synthesized per product until it has real orders, then real numbers take over automatically. Endpoints return a `demo` flag; Dashboard/Analytics show a small "sample figures" note when it's on. (Category on upload was already handled — the details form's dropdown lists only available categories and the product goes live in that category on save.)

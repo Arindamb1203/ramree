@@ -48,6 +48,7 @@
     .divider { height:1px; background:var(--line); margin:16px 0; }
 
     /* Dashboard */
+    .demote { font-size:12px; color:#8a6d14; background:#fbf7ea; border:1px solid #efe3bf; border-radius:9px; padding:8px 11px; margin-bottom:12px; }
     .kpis3 { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
     .kpi.big { grid-column:span 2; background:linear-gradient(135deg,var(--pinedk),#22332a); color:#f4f1e8; border:none; }
     .kpi.big .v { color:#fff; font-size:30px; } .kpi.big .k { color:#c7d3c7; }
@@ -311,6 +312,7 @@
     try{
       const r=await adminApi({action:"dashboard"}); const t=r.totals;
       box.innerHTML=`
+        ${r.demo?`<div class="demote">Showing sample figures — real numbers replace these as orders come in.</div>`:""}
         <div class="kpis3">
           <div class="kpi big"><div class="v">${money(t.invest)}</div><div class="k">Total Invest — money put into stock</div></div>
           <div class="kpi big"><div class="v">${money(t.earning)}</div><div class="k">Total Earning — sales revenue</div></div>
@@ -374,7 +376,7 @@
       const most = `<div class="card"><h2>Most sold (all time)</h2>${
         r.most_sold.length ? r.most_sold.map((x,i)=>`<div class="mrow"><span class="mm">#${i+1}</span><span class="mn">${escHtml(x.name)}</span><span class="mm">${x.sold_all} pcs</span></div>`).join("")
         : `<div class="muted">No sales yet.</div>`}</div>`;
-      box.innerHTML = `<div class="seclead" style="margin-top:0;">Movement over the last ${r.window_days} days.</div>` + buySec + lowSec
+      box.innerHTML = `${r.demo?`<div class="demote">Showing sample movement — real data replaces this as orders come in.</div>`:""}<div class="seclead" style="margin-top:0;">Movement over the last ${r.window_days} days.</div>` + buySec + lowSec
         + movers("Fast moving", r.fast, "fast")
         + movers("Slow moving", r.slow, "slow")
         + (r.dead.length ? movers("Not selling", r.dead, "dead") : "")
