@@ -7,6 +7,14 @@
   <title>Ramree — Beautiful, on you.</title>
   <meta name="description" content="Ramree — AI-powered dress try-on and shopping." />
 
+  <!-- PWA: installable to the home screen -->
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Ramree" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -30,5 +38,6 @@
   </div>
 
   <script type="module" src="/js/app.js"></script>
+  <script type="module" src="/js/pwa.js"></script>
 </body>
 </html>
