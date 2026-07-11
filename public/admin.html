@@ -93,6 +93,8 @@
     .cam-fb { position:absolute; left:0; right:0; bottom:0; padding:12px; text-align:center; color:#fff; font-size:14px; font-weight:600; background:linear-gradient(transparent,rgba(0,0,0,.6)); }
     .cam-fb.good { color:#9ff0b8; }
     .cam-side { position:absolute; top:10px; left:0; right:0; text-align:center; color:#fff; font-weight:700; font-size:15px; text-shadow:0 1px 4px rgba(0,0,0,.6); }
+    .cam-swap { position:absolute; top:8px; right:8px; width:40px; height:40px; border-radius:50%; border:none; cursor:pointer; color:#fff; background:rgba(0,0,0,.42); display:grid; place-items:center; -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
+    .cam-swap:active { transform:scale(.9); }
     .shots { display:flex; gap:8px; margin-top:12px; }
     .shots .sh { flex:1; aspect-ratio:3/4; border-radius:9px; background:#f0ede4; border:1px solid var(--line); overflow:hidden; display:grid; place-items:center; color:var(--ink3,#8a9389); font-size:11px; }
     .shots .sh img { width:100%; height:100%; object-fit:cover; }
@@ -386,10 +388,10 @@
 
   /* ══ UPLOAD (guided camera) ══ */
   const SIDES = [
-    { key:"front", label:"Front",       turn:"Face the camera" },
-    { key:"right", label:"Right side",  turn:"Turn to your RIGHT (side profile)" },
-    { key:"back",  label:"Back",        turn:"Turn around — show your BACK" },
-    { key:"left",  label:"Left side",   turn:"Turn to your LEFT (side profile)" },
+    { key:"front", label:"Front",       turn:"① Face the camera — full dress in frame, good light." },
+    { key:"right", label:"Right side",  turn:"② Turn 90° to your RIGHT — right-side profile." },
+    { key:"back",  label:"Back",        turn:"③ Turn around — show the BACK of the dress." },
+    { key:"left",  label:"Left side",   turn:"④ Turn 90° to your LEFT — left-side profile." },
   ];
   let SHOTS = [];      // captured (beautified) data URLs, index-aligned to SIDES
   let camState = null; // active camera controller
@@ -551,7 +553,8 @@
     return {ok:true,msg:"Perfect — hold still"};
   }
 
-  async function startCapture(idx){
+  async function startCapture(idx, facing){
+    facing = facing || "environment";
     const box=$("#sec-upload");
     const side=SIDES[idx];
     box.innerHTML=`
@@ -562,11 +565,15 @@
         <div class="cam-wrap" id="camWrap">
           <video id="v" playsinline muted autoplay></video>
           <div class="cam-side">${side.label}</div>
+          <button class="cam-swap" id="swapCam" aria-label="Switch camera" title="Switch front/back camera">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 7h3a2 2 0 012 2v7a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2h3" stroke-linecap="round"/><circle cx="12" cy="13" r="3"/><path d="M9 7l1.5-2h3L15 7" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 13a4 4 0 016.9-2.7M16 13a4 4 0 01-6.9 2.7" stroke-linecap="round"/></svg>
+          </button>
           <div class="pose-frame" id="frame"></div>
           <div class="cam-fb" id="fb">Starting camera…</div>
         </div>
         <button class="btn btn-pine" id="cap" disabled>Hold the pose…</button>
         <div style="display:flex;gap:14px;justify-content:center;margin-top:10px;">
+          <button class="link" id="swapLink">Switch camera</button>
           <button class="link" id="uploadShot">Upload this side</button>
           <button class="link" id="cancelCap">Cancel</button>
         </div>
@@ -577,29 +584,35 @@
     const started=performance.now();
     const front=side.key==="front";
     const MANUAL_AFTER=front?6000:2200; // side/back: pose won't lock, allow manual fast
+    const sampler=document.createElement("canvas"), sctx=sampler.getContext("2d",{willReadFrequently:true});
 
     function cleanup(){ running=false; if(raf)cancelAnimationFrame(raf); if(stream)stream.getTracks().forEach(t=>t.stop()); }
     camState=cleanup;
     $("#cancelCap").onclick=()=>{ cleanup(); loadUpload(); };
+    // Switch front/back camera and restart the stream on this same side.
+    const swap=()=>{ cleanup(); startCapture(idx, facing==="user"?"environment":"user"); };
+    $("#swapCam").onclick=swap; $("#swapLink").onclick=swap;
     // Upload this side from local storage instead of shooting it.
     $("#uploadShot").onclick=()=>$("#shotFile").click();
     $("#shotFile").onchange=async()=>{ const f=$("#shotFile").files&&$("#shotFile").files[0]; if(!f)return;
-      try{ cleanup(); SHOTS[idx]=await beautifyFile(f); if(idx+1<SIDES.length) startCapture(idx+1); else showDetails(); }
+      try{ cleanup(); SHOTS[idx]=await beautifyFile(f); if(idx+1<SIDES.length) startCapture(idx+1, facing); else showDetails(); }
       catch(e){ /* ignore bad file */ } };
 
     function grab(){
-      cleanup();
-      const w=v.videoWidth||810, h=v.videoHeight||1080;
-      SHOTS[idx]=enhanceCanvasToDataUrl(v,w,h);
-      if(idx+1<SIDES.length) startCapture(idx+1); else showDetails();
+      if(!v.videoWidth || v.readyState<2){ fb.textContent="One moment — camera warming up…"; return; } // never grab a blank frame
+      const w=v.videoWidth, h=v.videoHeight;
+      const shot=enhanceCanvasToDataUrl(v,w,h);   // capture the LIVE frame first…
+      cleanup();                                  // …then stop the camera
+      SHOTS[idx]=shot;
+      if(idx+1<SIDES.length) startCapture(idx+1, facing); else showDetails();
     }
     function enableManual(){ if(manual)return; manual=true; cap.disabled=false; cap.textContent="Capture now"; cap.onclick=grab; }
 
     const dims={width:{ideal:810},height:{ideal:1080}};
-    try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},...dims},audio:false}); }
-    catch(e){ try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",...dims},audio:false}); }
-      catch(e2){ fb.textContent="Camera unavailable"; return; } }
-    let front_cam=false; try{ const fm=stream.getVideoTracks()[0]?.getSettings?.().facingMode; front_cam=(fm==="user"); }catch(e){}
+    try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},...dims},audio:false}); }
+    catch(e){ try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:(facing==="user"?"environment":"user"),...dims},audio:false}); }
+      catch(e2){ fb.textContent="Camera unavailable — allow camera access or use Upload"; enableManual(); return; } }
+    let front_cam=false; try{ const fm=stream.getVideoTracks()[0]?.getSettings?.().facingMode; front_cam=(fm==="user")||(facing==="user"&&!fm); }catch(e){}
     v.style.transform=front_cam?"scaleX(-1)":"none";
     v.srcObject=stream; await v.play().catch(()=>{});
 
@@ -611,15 +624,25 @@
     if(!usePose){ fb.textContent="Tap Capture when the "+side.label.toLowerCase()+" looks good"; enableManual(); }
     else fb.textContent="Step into the frame";
 
+    function isDark(){ try{ sampler.width=24; sampler.height=24; sctx.drawImage(v,0,0,24,24); const d=sctx.getImageData(0,0,24,24).data; let s=0; for(let i=0;i<d.length;i+=4) s+=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2]; return (s/(d.length/4))<52; }catch(e){ return false; } }
+
     async function loop(ts){
       if(!running)return;
-      if(usePose && ts-last>150 && v.videoWidth){
-        last=ts; let res;
-        try{ const poses=await _detector.estimatePoses(v,{flipHorizontal:false}); res=checkPose(poses&&poses[0]?poses[0].keypoints:null,v.videoWidth,v.videoHeight); }
-        catch(e){ res={ok:false,msg:"Adjusting…"}; }
-        fb.textContent=res.msg; fb.classList.toggle("good",res.ok); frame.classList.toggle("good",res.ok);
-        if(res.ok){ if(!goodSince)goodSince=ts; if(ts-goodSince>=900){ cap.textContent="Capturing…"; running=false; if(raf)cancelAnimationFrame(raf); return setTimeout(grab,120); } cap.disabled=false; cap.textContent="Ready — hold still"; cap.onclick=grab; }
-        else { goodSince=0; if(!manual){ cap.disabled=true; cap.textContent="Hold the pose…"; } }
+      if(ts-last>160 && v.videoWidth){
+        last=ts;
+        const dark=isDark();
+        if(usePose){
+          let res;
+          try{ const poses=await _detector.estimatePoses(v,{flipHorizontal:false}); res=checkPose(poses&&poses[0]?poses[0].keypoints:null,v.videoWidth,v.videoHeight); }
+          catch(e){ res={ok:false,msg:"Adjusting…"}; }
+          if(dark) res={ok:false,msg:"Too dark — turn on more light"};
+          fb.textContent=res.msg; fb.classList.toggle("good",res.ok); frame.classList.toggle("good",res.ok);
+          if(res.ok){ if(!goodSince)goodSince=ts; if(ts-goodSince>=900){ cap.textContent="Capturing…"; running=false; if(raf)cancelAnimationFrame(raf); return setTimeout(grab,120); } cap.disabled=false; cap.textContent="Ready — hold still"; cap.onclick=grab; }
+          else { goodSince=0; if(!manual){ cap.disabled=true; cap.textContent="Hold the pose…"; } }
+        } else if(manual){
+          if(dark){ fb.textContent="Too dark — turn on more light"; fb.classList.remove("good"); }
+          else { fb.textContent="Looks good — tap Capture"; fb.classList.add("good"); }
+        }
       }
       if(performance.now()-started>MANUAL_AFTER) enableManual();
       raf=requestAnimationFrame(loop);
