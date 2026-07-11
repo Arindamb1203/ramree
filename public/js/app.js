@@ -2,13 +2,9 @@
    Ramree — SPA core: navigation stack, shared state, screens
    ========================================================== */
 import { api } from "./api.js";
-import * as catalog from "./screens/catalog.js";
-import * as product from "./screens/product.js";
-import * as lead from "./screens/lead.js";
-import * as confirm from "./screens/confirm.js";
-import * as checkout from "./screens/checkout.js";
-import * as buy from "./screens/buy.js";
-import * as tryon from "./screens/tryon.js";
+import * as catalog from "./screens/catalog.js";   // home + category — loaded eagerly
+// Every other screen is loaded ON DEMAND (dynamic import) so the first paint
+// only downloads app.js + api.js + catalog.js instead of the whole app.
 
 /* ── Shared app state (in-memory only; try-on photos never persisted) ── */
 export const state = {
@@ -25,18 +21,19 @@ const topbarTitle = document.getElementById("topbarTitle");
 const backBtn = document.getElementById("backBtn");
 const toastEl = document.getElementById("toast");
 
-/* ── Screen registry ── */
-const screens = {
-  catalog: catalog.render,
-  category: catalog.renderCategory,
-  product: product.render,
-  lead: lead.render,
-  wishlistConfirm: confirm.renderWishlist,
-  postBuy: confirm.renderPostBuy,          // buy/wishlist choice after a liked try-on
-  checkout: checkout.render,
-  buy: buy.render,
-  tryonCamera: tryon.renderCamera,
-  tryonResult: tryon.renderResult,
+/* ── Screen registry ── each entry returns the render fn (dynamically importing
+   its module the first time it's needed; the browser caches it after). ── */
+const screenLoaders = {
+  catalog:         () => catalog.render,
+  category:        () => catalog.renderCategory,
+  product:         async () => (await import("./screens/product.js")).render,
+  lead:            async () => (await import("./screens/lead.js")).render,
+  wishlistConfirm: async () => (await import("./screens/confirm.js")).renderWishlist,
+  postBuy:         async () => (await import("./screens/confirm.js")).renderPostBuy,
+  checkout:        async () => (await import("./screens/checkout.js")).render,
+  buy:             async () => (await import("./screens/buy.js")).render,
+  tryonCamera:     async () => (await import("./screens/tryon.js")).renderCamera,
+  tryonResult:     async () => (await import("./screens/tryon.js")).renderResult,
 };
 
 /* ── Navigation stack ──
@@ -91,13 +88,14 @@ async function render() {
   if (stage._cleanup) { try { stage._cleanup(); } catch (e) {} stage._cleanup = null; }
 
   stage.innerHTML = "";
-  const fn = screens[cur.name];
-  if (!fn) { stage.innerHTML = `<div class="empty">Screen not found.</div>`; return; }
+  const loader = screenLoaders[cur.name];
+  if (!loader) { stage.innerHTML = `<div class="empty">Screen not found.</div>`; return; }
 
   const view = document.createElement("section");
   view.className = "screen";
   stage.appendChild(view);
   try {
+    const fn = await loader();           // dynamic import on first use, cached after
     await fn(view, cur.params);
   } catch (err) {
     view.innerHTML = `<div class="empty">Something went wrong.<br><span class="muted">${escapeHtml(err.message || "")}</span></div>`;
@@ -141,3 +139,8 @@ document.addEventListener("contextmenu", (e) => {
 stack.push({ name: "catalog", params: {}, title: "Ramree", root: true });
 history.replaceState({ depth: 1 }, "");
 render();
+
+// After the home screen is up, quietly warm the most likely next screen so the
+// first tap into a product is instant. Never blocks the initial paint.
+const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1200));
+idle(() => { import("./screens/product.js").catch(() => {}); });
