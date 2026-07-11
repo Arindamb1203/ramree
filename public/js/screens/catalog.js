@@ -11,7 +11,7 @@ export async function render(view) {
       <span>Admin</span>
     </a>
     <div class="scene">
-      <img class="scene-photo" alt="" src="/media/hero/1"
+      <img class="scene-photo" alt="" src="/media/hero/1" decoding="async" fetchpriority="high"
            onload="this.closest('.scene').classList.add('has-photo')"
            onerror="this.remove()">
       <div class="sun"></div>

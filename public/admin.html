@@ -47,6 +47,17 @@
     .codebox { background:#2c4033; color:#f4f1e8; padding:12px 14px; border-radius:11px; font-family:monospace; font-size:15px; letter-spacing:1px; text-align:center; margin-top:8px; }
     .divider { height:1px; background:var(--line); margin:16px 0; }
 
+    /* Password field: custom mask (peek last char) + show/hide eye */
+    .pw { position:relative; }
+    .pw > input { font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; letter-spacing:1px; padding-right:46px; }
+    .pw > input.masked { color:transparent; caret-color:var(--ink); }
+    .pw .pw-mask { position:absolute; inset:0; display:flex; align-items:center; overflow:hidden;
+      padding:12px 46px 12px 13px; font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:16px; letter-spacing:1px; color:var(--ink); pointer-events:none; white-space:nowrap; }
+    .pw.reveal .pw-mask { display:none; }
+    .pw .pw-eye { position:absolute; right:6px; top:50%; transform:translateY(-50%); width:34px; height:34px;
+      border:none; background:none; color:var(--ink2); display:grid; place-items:center; cursor:pointer; }
+    .pw.reveal .pw-eye { color:var(--pinedk); }
+
     /* Dashboard */
     .demote { font-size:12px; color:#8a6d14; background:#fbf7ea; border:1px solid #efe3bf; border-radius:9px; padding:8px 11px; margin-bottom:12px; }
     .kpis3 { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
@@ -190,6 +201,32 @@
     return data;
   }
   function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
+
+  /* Password UX: show each typed char for a moment then mask it, plus an eye
+     toggle to reveal the whole thing. The real value stays in input.value
+     (native editing/paste intact) — the mask is a visual overlay only. */
+  const EYE=`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`;
+  const EYE_OFF=`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3l18 18"/><path d="M10.6 6.2A9.7 9.7 0 0112 6c6.5 0 10 6 10 6a17 17 0 01-3.2 3.8M6.2 6.2A17 17 0 002 12s3.5 7 10 7a9.6 9.6 0 004-.86" stroke-linecap="round"/></svg>`;
+  function enhancePasswords(root=document){
+    root.querySelectorAll('input[type="password"]').forEach((input)=>{
+      input.type="text"; input.setAttribute("autocomplete","off"); input.setAttribute("autocapitalize","off"); input.spellcheck=false;
+      const wrap=document.createElement("div"); wrap.className="pw";
+      input.parentNode.insertBefore(wrap, input); wrap.appendChild(input);
+      input.classList.add("masked");
+      const mask=document.createElement("div"); mask.className="pw-mask"; wrap.appendChild(mask);
+      const eye=document.createElement("button"); eye.type="button"; eye.className="pw-eye"; eye.setAttribute("aria-label","Show password"); eye.innerHTML=EYE; wrap.appendChild(eye);
+      let t;
+      const paint=(peek)=>{ const v=input.value||""; if(!v){ mask.textContent=""; return; }
+        mask.textContent = peek ? "•".repeat(v.length-1)+v.slice(-1) : "•".repeat(v.length);
+        mask.scrollLeft = input.scrollLeft; };
+      input.addEventListener("input",()=>{ paint(true); clearTimeout(t); t=setTimeout(()=>paint(false),750); });
+      input.addEventListener("scroll",()=>{ mask.scrollLeft=input.scrollLeft; });
+      input.addEventListener("blur",()=>{ clearTimeout(t); if(!wrap.classList.contains("reveal")) paint(false); });
+      eye.addEventListener("click",()=>{ const on=wrap.classList.toggle("reveal"); input.classList.toggle("masked",!on);
+        eye.innerHTML=on?EYE_OFF:EYE; eye.setAttribute("aria-label",on?"Hide password":"Show password"); input.focus(); });
+      paint(false);
+    });
+  }
 
   // Downscale image file → JPEG data URL
   function fileToDataUrl(file, max=1200, q=0.85){
@@ -699,6 +736,7 @@
         $("#sec-staff").querySelector(".card").appendChild(el(`<div class="codebox">${r.recovery_code}</div>`));
         $("#st_user").value=""; $("#st_pass").value=""; $("#st_phone").value=""; renderStaffList(); }
       catch(e){ m.className="status err"; m.textContent=e.message; } };
+    enhancePasswords(box);
     renderStaffList();
   }
   async function renderStaffList(){
@@ -733,11 +771,15 @@
     $("#hero_go").onclick=async()=>{ const m=$("#hero_msg"); m.className="status"; m.textContent="Generating… ~30s"; $("#hero_go").disabled=true;
       try{ await adminApi({action:"hero"}); m.className="status ok"; m.textContent="✓ Landing image updated. Refresh the shop home."; }
       catch(e){ m.className="status err"; m.textContent=e.message; } $("#hero_go").disabled=false; };
+    enhancePasswords(box);
   }
 
   function splitList(s){ return String(s||"").split(",").map(x=>x.trim()).filter(Boolean); }
   function escHtml(s){ return String(s??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
   function escAttr(s){ return String(s??"").replace(/"/g,"&quot;"); }
+
+  /* Password reveal/peek on the static auth fields (login, setup, forgot). */
+  enhancePasswords($("#authWrap"));
 
   /* Resume session if token exists */
   (async()=>{ if(!TOKEN){ showAuth("loginView"); return; }
