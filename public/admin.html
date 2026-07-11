@@ -769,9 +769,23 @@
         m.className="status ok"; m.textContent="✓ Password updated."; $("#cp_old").value=""; $("#cp_new").value=""; }
       catch(e){ m.className="status err"; m.textContent=e.message; } };
     $("#hero_go").onclick=async()=>{ const m=$("#hero_msg"); m.className="status"; m.textContent="Generating… ~30s"; $("#hero_go").disabled=true;
-      try{ await adminApi({action:"hero"}); m.className="status ok"; m.textContent="✓ Landing image updated. Refresh the shop home."; }
-      catch(e){ m.className="status err"; m.textContent=e.message; } $("#hero_go").disabled=false; };
+      try{
+        const r=await adminApi({action:"hero"});           // PNG from OpenAI
+        m.textContent="Optimising image…";
+        const jpeg=await heroCompress(r.image);            // → small JPEG (keeps the shop light)
+        await adminApi({action:"hero-save", image:jpeg});
+        m.className="status ok"; m.textContent="✓ Landing image updated & optimised. Refresh the shop home.";
+      }catch(e){ m.className="status err"; m.textContent=e.message; }
+      $("#hero_go").disabled=false; };
     enhancePasswords(box);
+  }
+  // Downscale the hero to ≤1280px-wide JPEG so the home page loads light & fast.
+  function heroCompress(dataUrl){
+    return new Promise((res,rej)=>{ const img=new Image();
+      img.onload=()=>{ const max=1280; let w=img.width,h=img.height; if(w>max){h=Math.round(h*max/w);w=max;}
+        const c=document.createElement("canvas"); c.width=w; c.height=h; c.getContext("2d").drawImage(img,0,0,w,h);
+        res(c.toDataURL("image/jpeg",0.82)); };
+      img.onerror=()=>rej(new Error("Could not optimise image")); img.src=dataUrl; });
   }
 
   function splitList(s){ return String(s||"").split(",").map(x=>x.trim()).filter(Boolean); }

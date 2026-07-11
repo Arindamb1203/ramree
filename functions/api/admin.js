@@ -1,7 +1,7 @@
 /* POST /api/admin  { action, ... }  — token-authenticated (Bearer or body.token)
    Actions:
      list | product-get | product-save | product-delete | product-images
-     hero | compose | accounts | dashboard | analytics
+     hero | hero-save | compose | accounts | dashboard | analytics
      staff-create | staff-list | staff-set-active
 */
 import { json, preflight, ensureTables, parseImages } from "./_utils.js";
@@ -118,11 +118,20 @@ export async function onRequest(context) {
     }
 
     if (body.action === "hero") {
+      // Generate only, return the PNG to the client; the client downscales &
+      // re-encodes to JPEG (Workers have no canvas) then calls hero-save. This
+      // keeps the stored hero small (~300 KB JPEG vs ~2 MB PNG).
       if (!env.OPENAI_API_KEY) return json({ error: "OPENAI_API_KEY not set" }, 500);
       const imgs = await imageGenerate({ apiKey: env.OPENAI_API_KEY, model: getModel(env), prompt: HERO_PROMPT, size: "1536x1024", quality: env.OPENAI_HERO_QUALITY || "medium", n: 1 });
       if (!imgs[0]) return json({ error: "Hero generation failed" }, 502);
-      const url = await putImage(env, "hero/1", imgs[0]);
-      return json({ ok: true, images: [url] });
+      return json({ ok: true, image: imgs[0] });
+    }
+
+    if (body.action === "hero-save") {
+      const image = String(body.image || "");
+      if (!image.startsWith("data:")) return json({ error: "image (data URL) required" }, 400);
+      const url = await putImage(env, "hero/1", image);
+      return json({ ok: true, url });
     }
 
     /* ── Accounts / P&L ─────────────────────────────── */
